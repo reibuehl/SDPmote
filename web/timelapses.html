@@ -1,0 +1,261 @@
+﻿<!--
+#  File: timelapses.html
+#  Description: folder management page
+#  
+#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#
+-->
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Timelapse folders{% end %}
+
+{% block pagescript %}
+	
+	function CreateThumbnail(info){
+	strtitle=info.directory.replace(/\\/g,"/").split("/").slice(-1);
+	strtitle_display = String(strtitle);
+	
+	//max 23 chars in display... otherwise thumbs will not wrap nicely
+	if (strtitle_display.length > 25) {strtitle_display = strtitle_display.slice(0,25)+"...";}
+	
+	img=info.directory.replace(/\\/g,"/").split("/").slice(1).join("/")+"/"+info.thumbnail;
+	
+	//find out if folder is currently beeing recorded, if so disable buttons and add text to folder name DONT load image CAN KILL IT!
+	if(global_tlon && strtitle==global_tlon_folder) {strdisabled="disabled"; strrecon=" [RECORDING]"; img=""; } else {strdisabled=""; strrecon=""; }
+	
+	//thumb='      <div class="col-sm-6 col-md-3 thumb-hover">';
+	thumb='      <div class="col-lg-3 col-md-4 col-sm-5 thumb-hover">';
+	thumb=thumb+'	<div class="thumbnail">';
+	thumb=thumb+'	  <a onclick="javascript: initfileModal(\''+strtitle+'\'); " href="javascript: void(0);"><img src="' + img + '" alt="thumbnail"></a>';
+	thumb=thumb+'	</div>';
+	thumb=thumb+'		<div class="caption">';
+	thumb=thumb+'			<h4><a onclick="javascript: initfileModal(\''+strtitle+'\'); " href="javascript: void(0);">'+strtitle_display+'</a>'+strrecon+'</h4>';
+	thumb=thumb+'			<p>Folder "'+strtitle_display+'" has <b>'+info.count+' images</b> (Size: '+info.size+').</p>';
+	thumb=thumb+'				<p>';
+	thumb=thumb+'				<div class="btn-group">';
+	thumb=thumb+'				<button type="button" ' + strdisabled+ ' onclick="javascript: ziptldir(\''+strtitle+'\'); " class="btn btn-primary"><span class="glyphicon glyphicon-download"></span> Download</button>';
+	thumb=thumb+'				<button type="button" ' + strdisabled+ ' class="btn btn-primary dropdown-toggle" data-toggle="dropdown">';
+	thumb=thumb+'					<span class="caret"></span>';
+    thumb=thumb+'					<span class="sr-only">Toggle Dropdown</span>';
+	thumb=thumb+' 				</button>';
+	thumb=thumb+'				<ul class="dropdown-menu" role="menu">';
+	thumb=thumb+' 					<li><a onclick="javascript: initfileModal(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-file"></span> Browse Pictures</a></li>';
+	thumb=thumb+' 					<li><a onclick="javascript: rentldir(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-edit"></span> Rename</a></li>';
+	thumb=thumb+' 					<li><a onclick="javascript: deltldir(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-trash"></span> Delete Folder</a></li>';
+	//thumb=thumb+' 					<li class="divider"></li>';
+	//thumb=thumb+' 					<li><a href="javascript: void(0);">Separated link</a></li>';
+	thumb=thumb+'				</ul>';
+	thumb=thumb+'				</div>';
+
+	thumb=thumb+'				</p>';
+	thumb=thumb+'		</div>';
+	thumb=thumb+'</div>';
+	return thumb;
+	}
+	
+	
+	
+	function serverRespondZip( data ) {
+		ziptodownload=data.zip.replace(/\\/g,"/").split("/").slice(1).join("/")
+		location.href=ziptodownload;
+		myDialogs.hidePleaseWait();
+	
+	}
+		
+	function serverRespondDirs( data ) {
+	thumbs="";
+	
+	for (var i=0; i < data.info.length; i++){
+		thumbs=thumbs+CreateThumbnail(data.info[i]);
+	}
+	$('#row').html(thumbs);
+	$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span> refresh');
+	$('#btnrefresh').prop('disabled', false);
+	}
+	
+	function ziptldir(folder){
+		params = { op: "ziptldir", tlfolder: folder };
+		myDialogs.showPleaseWait();
+		$.getJSON( '/com' , params, serverRespondZip );
+	}
+	
+		
+	function rentldir(folder){
+		savedir = folder;
+				
+		bootbox.prompt({
+		  title: "Rename folder to:",
+		  value: savedir,
+		  callback: function(result) {
+			if ((result == null) || (savedir == result)) {                                             
+				//same or null
+			  } else {
+				//do the rename
+				params = { op: "rentldir", tlfolder: folder, tlfolder_new: result };
+				$.getJSON( '/com' , params, serverRespondDirs );
+			  }
+		  }
+		});
+		
+
+	}
+	
+	
+	function deltldir(folder){
+		
+		bootbox.confirm("Are you sure you want to delete the Folder: <b>" + folder + "</b>?", function(result) {
+		 if (result) {
+		   //Delete it
+			params = { op: "deltldir", tlfolder: folder };
+			$.getJSON( '/com' , params, serverRespondDirs );
+		 
+		 }
+		}); 
+	}
+	
+	function serverGetDirs( param ) {
+		
+		$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span> refreshing..')
+		$('#btnrefresh').prop('disabled', true);
+		
+		params = { op: param };
+		$.getJSON( '/com' , params, serverRespondDirs );
+	}
+	
+	
+	function serverRespondFiles(data) {
+	
+	var rootpath="timelapse/";
+	
+	var mySelect = $('#imgfileselect');
+	var myDeleteButton = $('#fileDelete');
+	mySelect.empty();
+	$('#fileModalLabel').html('Pictures in <b>"' +data.foldername+'"</b>');
+	
+	for (var i=0; i < data.files.length; i++){
+		mySelect.append($('<option></option>').val(rootpath+data.foldername+'/'+data.files[i]).html(data.files[i]));
+	}
+	mySelect.unbind();
+	mySelect.change(function() {
+		var values = [];
+			$('#imgfileselect option:selected').each(function() {
+				values.push($(this).val());
+			});
+		
+		$('#imgpreview').attr("src", values[0]);
+	});
+	
+	myDeleteButton.unbind();
+	myDeleteButton.click(function() {
+		var values = [];
+			$('#imgfileselect option:selected').each(function() {
+				values.push($(this).text());
+			});
+
+		deltlfiles(data.foldername, values)
+	});
+	
+	
+	 mySelect[0].selectedIndex = 0;
+	 mySelect.trigger( "change" );
+	
+	
+	}
+	
+	function deltlfiles(folder, files){
+		
+		bootbox.confirm("Are you sure you want to delete the selected files?", function(result) {
+		 if (result) {
+		   //Delete it
+			jQuery.ajaxSettings.traditional = true;
+			params = { op: "deltlfiles", tlfolder: folder, tlfiles: files };
+			$.getJSON( '/com' , params, serverRespondFiles );
+		
+		 }
+		}); 
+	}
+	
+	function serverGetFiles( param ) {
+		params = { op: "gettlfiles", tlfolder: param };;
+		$.getJSON( '/com' , params, serverRespondFiles );
+	}
+	
+	function initfileModal(tlfolder){
+		$('#fileModalLabel').html("Loading pictures in " + tlfolder + " please wait");
+		serverGetFiles(tlfolder);
+		$('#fileModal').modal('show');
+	};
+	
+	
+
+	$(document).ready( function() {
+		
+		serverGetDirs('gettldirs');
+	
+	});
+	
+	
+{% end %}
+
+{% block navigation %}
+	<li><a href="/"><span class="glyphicon glyphicon-camera"></span> view</a></li>
+    <li class=""><a href="um.html"><span class="glyphicon glyphicon-dashboard"></span> control</a></li>
+	<li class="active"><a href="timelapses.html"><span class="glyphicon glyphicon-folder-open"></span> folders</a></li>
+{% end %}
+			
+{% block content %}	
+
+<!-- Modal for file browser  -->
+<div class="modal fade" id="fileModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="fileModalLabel">Modal title</h4>
+      </div>
+      <div class="modal-body">
+   		<div class="row">
+			<div class="col-xs-12 col-sm-6 col-md-8">
+				<img src="images/nocam.png" id="imgpreview" class="img-responsive" "></img>
+			</div>
+			
+			<div class="col-xs-6 col-md-4">
+            <select id="imgfileselect" size="10" style="min-height: 270px; max-width: 160px; overflow: auto; " multiple>
+			  
+			</select>
+			
+			</div>
+		</div>
+	  </div>
+      <div class="modal-footer">
+		<button type="button" id="fileDelete" class="btn btn-danger">Delete Selected</button>
+        <button type="button" onclick="javascript: serverGetDirs('gettldirs'); " class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+	
+	
+	<button type="button" id="btnrefresh" onclick="javascript: serverGetDirs('gettldirs'); " class="btn btn-default"><span class="glyphicon glyphicon-refresh"></span> refresh</button>
+	
+
+	<hr />
+	<div id="row" class="row"></div>
+   
+{% end %}	
+  

@@ -1,0 +1,583 @@
+﻿<!--
+#  File: um.html
+#  Description: ultimaker control page
+#  
+#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#
+-->
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Ultimaker control and status{% end %}
+
+{% block pagescript %}
+	///CAM Stuff
+	
+	
+var imageNr = 0; // Serial number of current image
+var finished = new Array(); // References to img objects which have finished downloading
+var paused = false;
+
+function ismsie() {
+        var ua = window.navigator.userAgent;
+        var msie = ua.indexOf("MSIE ");
+
+        if (msie > 0 || !!navigator.userAgent.match(/Trident.*rv\:11\./))      // If Internet Explorer, return version number
+            return true;
+        else                 // If another browser, return 0
+            return false;
+}
+
+function createImageLayer() {
+  var img = new Image();
+  img.style.position = "absolute";
+  img.style.zIndex = -1;
+  img.style.width = "450px";
+  img.style.height = "338px";
+  img.onload = imageOnload;
+  img.onclick = imageOnclick;
+  img.src = "http://" + settings.Webserver.mjpg_ip +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + "&n=" + (++imageNr);
+  var webcam = document.getElementById("webcam");
+  webcam.insertBefore(img, webcam.firstChild);
+  $('#wcstatus').html("Webcamstatus: Streaming (Frames streamed so far: " + imageNr + ")");
+}
+
+// Two layers are always present (except at the very beginning), to avoid flicker
+function imageOnload() {
+  this.style.zIndex = imageNr; // Image finished, bring to front!
+  while (1 < finished.length) {
+    var del = finished.shift(); // Delete old image(s) from document
+    del.parentNode.removeChild(del);
+  }
+  finished.push(this);
+  if (!paused) createImageLayer();
+}
+
+function imageOnclick() { // Clicking on the image will pause the stream
+  paused = !paused;
+  if (!paused) {
+	createImageLayer();
+	$('#wcstatus').html("Webcamstatus: Streaming"); }
+  else {
+	$('#wcstatus').html("Webcamstatus: Stopped");
+  }
+}
+
+function setCam() {
+
+	if (camisactive){
+				
+		
+		if (ismsie() == true) { 
+			$('#webcam').html('<noscript><img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + '" /></noscript>');
+			$('#webcam').css("height", "338px");
+			createImageLayer();
+			$('#wcstatus').html("Webcamstatus: Webcam streaming");
+			}
+		else {
+			//for everything else, start mjpeg streming directly in browser...
+			$('#webcam').html('<img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlstream + '" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 640px;" />');
+		}
+	}
+	else
+	{
+		$('#webcam').html('<img src="images/nocam.png" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 480px;" />');	
+	}
+}
+	
+	/// END CAM Stuff
+	
+	function SendMoveRel(axis) {
+	var speed = "";
+	
+		if (axis=="E"||axis=="E-") {
+			var moveby = $('#temp_extrude_mm').val();
+			speed="F200";
+		}
+		else 
+		{
+			var moveby = $('#rel-moveby input:radio:checked').val();
+		}
+					
+		$.getJSON( '/com' , { op: "sendgcodespecial", command: "MOVEREL", axis: axis, moveby: moveby, speed: speed } );
+
+		
+		
+	}
+	
+	function SendFullPrintStop() {
+		$.getJSON( '/com' , { op: "sendgcodespecial", command: "FULLSTOP" } );
+	}
+	
+	
+	function refreshSD() {
+		$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span>...');
+		
+		$('#btnrefresh').prop('disabled', true);
+		$('#select_files').prop('disabled', true);
+		$('#btngroup-fileprint button').attr('disabled','disabled');
+		
+		
+		SendGCodeDirect("M20");
+	
+	
+	}
+	
+	function SendGCodeDirect(cmd){
+		
+		if (cmd == "") {
+		}
+		else
+		{
+			$.getJSON( '/com' , { op: "sendgcode", command : cmd } );
+		}
+	}
+	
+	
+	function SendGCode(){
+		
+		
+		cmd = $("#gcodecommand").val();
+		if (cmd == "") {
+		}
+		else
+		{
+			$.getJSON( '/com' , { op: "sendgcode", command : cmd } );
+		}
+	}
+	
+	function GetSerialStatus(){
+		
+		params = { op: "serialstatus" };
+		$.ajax({ 
+         async: false, 
+		 type: 'GET',
+		 url: '/com', 
+		 data: params,
+         dataType: "json",
+		 params: params,
+         success: function(data) {
+                 
+            $('#serialstatus').html("");
+			for (var i=0; i < data.seriallog.length; i++){
+				
+				$('#serialstatus').html($('#serialstatus').html() + data.seriallog[i] + "<br />");
+			}
+			$('#serialstatus').html($('#serialstatus').html().slice(0,-4))
+			$('#serialstatus').scrollTop($('#serialstatus')[0].scrollHeight);
+  
+        }, 
+		});
+					
+	};
+	
+	function ToggleAutoUpdate() {
+		if ($('#autoupdate').is(":checked"))
+			{
+				// it is checked
+				SerialInt = setInterval( "GetSerialStatus()" , 1000);
+			}
+			else 
+			{
+				//not
+				clearInterval(SerialInt); 
+
+			}
+		
+		
+	}
+	
+	function UploadFile() {
+	
+			var myfilebox=bootbox.dialog({
+                title: "Upload gcode file...",
+				closeButton: false,
+                message: '<form id="up" enctype="multipart/form-data" action="/upload" method="post">' +
+							'<div class="form-group">' +
+							'	<label for="InputFile">File input</label>' +
+							'	<input type="file" name="InputFile" id="InputFile" accept=".gcode,.txt">' +
+							'	<p id="frmhelper" class="help-block">Select the gcode file to upload and press upload.</p>' +
+							'</div>' +
+						'</form>',
+                buttons: {
+					cancel: {
+						label: "Cancel",
+						className: "btn-default",
+						callback: function() { 
+						}
+					},
+                    main: {
+                        label: "upload",
+                        className: "btn-danger",
+                        callback: function () {
+						  
+						$form=$('#up');
+						$myfiles=$form.find("input[type='file']")[0].files;
+						
+						if ($myfiles.length == 0) {
+							$('#frmhelper').html('ERROR: <p class="text-warning">You must select a file to upload (*.gcode)!</p>');
+							return false;
+						
+						}
+						
+						//disable all buttons
+						$(".modal-footer :input").attr("disabled", true);
+						
+						$myfile=$myfiles[0];
+						$('#frmhelper').html('UPLOAD: <p class="text-info"> Sending file '+$myfile.name+'...</p>');
+											
+						var form_data = new FormData();
+						form_data.append("InputFile", $myfile);
+
+						
+						$.ajax({
+							url: $form.attr("action"),
+							processData: false, // Important!
+							contentType: false, // Important!
+							data: form_data,
+							type: $form.attr("method"),
+							success: function(res) {
+								$('#frmhelper').html('UPLOAD: <p class="text-info"> Sending file '+res+'...DONE!</p>');
+								$(".modal-footer :input").attr("disabled", false);
+								myfilebox.modal('hide');
+							},
+							error: function() {
+								$('#frmhelper').html('ERROR: <p class="text-danger">Something went wrong with the upload... try again.</p>');
+								$(".modal-footer :input").attr("disabled", false);
+							}
+						});
+						
+						//no autoclose!
+						return false;
+				
+                        }
+                    }
+                }
+            }
+        );
+	
+	
+	
+	}
+	
+	
+	$(document).ready( function() {
+	
+	
+		//function for the tabs in the controls section
+		$("#controlstab a").click(function(e){
+			e.preventDefault();
+			$(this).tab('show');
+		});
+		
+			
+		
+		$('#XY').crosshair({
+			axisnames: {x: 'X', y: 'Y'},
+			axisscale: {x: settings.Printer.x_max_mm, y: settings.Printer.y_max_mm},
+			axisscaleinvert: {x: false, y: true},
+			axisscaleunit: {x: 'mm', y: 'mm'},
+			axisscalelegend: true,
+			wrap: false,
+			marker: '<div class="crosshair-marker"></div>',
+			callback: function(crosshair) {
+				$("#gcodecommand").val("G1 X"+Math.round(crosshair.scl.x)+" Y"+Math.round(crosshair.scl.y));
+				
+				if ($('#directsendxyz').is(":checked"))
+				{
+					// it is checked so send the gcode
+					SendGCode();
+				}
+							
+			}
+		});
+		
+		$('#Z').crosshair({
+			singleaxismode: {on: true, axis: 'y'},
+			axisnames: {x: 'X', y: 'Z'},
+			axisscale: {x: settings.Printer.x_max_mm, y: settings.Printer.z_max_mm},
+			axisscaleinvert: {x: false, y: false},
+			axisscaleunit: {x: 'mm', y: 'mm'},
+			axisscalelegend: true,
+			wrap: false,
+			marker: '<div class="crosshair-marker" style="width: 200px; "></div>',
+			callback: function(crosshair) {
+				$("#gcodecommand").val("G1 Z"+Math.round(crosshair.scl.y));
+				
+				if ($('#directsendxyz').is(":checked"))
+				{
+					// it is checked so send the gcode
+					SendGCode();
+				}
+			}
+		});
+				
+			
+		$('#autoupdate').bootstrapSwitch({
+			on: 'On', // default 'On'
+			off: 'Off', // default 'Off'
+			onLabel: '', //default ''
+			offLabel: '', //default ''
+			same: true, // default false. same text for on/off and onLabel/offLabel
+			size: 'xs', // xs/sm/md/lg, default 'md'
+			onClass: 'primary', //success/primary/danger/warning/default, default 'primary'
+			offClass: 'default', //success/primary/danger/warning/default default 'default'
+		});
+		
+		$('#directsendxyz').bootstrapSwitch({
+			same: true, // default false. same text for on/off and onLabel/offLabel
+			size: 'xs', // xs/sm/md/lg, default 'md'
+		});
+		
+		$("#gcodecommand").keyup(function(event){
+			if(event.keyCode == 13){
+				SendGCode();
+			}
+		});
+	
+		GetSerialStatus();
+		//SerialInt = setInterval( "GetSerialStatus()" , 1000);
+		
+		setCam();
+		
+
+	});
+
+
+{% end %}
+
+{% block navigation %}
+	<li class=""><a href="/"><span class="glyphicon glyphicon-camera"></span> view</a></li>
+    <li class="active"><a href="um.html"><span class="glyphicon glyphicon-dashboard"></span> control</a></li>
+	<li class=""><a href="timelapses.html"><span class="glyphicon glyphicon-folder-open"></span> folders</a></li>
+{% end %}
+			
+{% block content %}	
+<div class="container-fluid">
+	<div class="row">
+			<div class="col-md-6">
+			   <div id="webcam">Loading...</div>
+			   <div id="wcstatus" style="padding-bottom: 20px; "></div>
+			</div>
+			<div class="col-md-6 col-xs-6">
+				
+							
+				<div role="tabpanel">
+
+					<!-- Nav tabs -->
+					<ul class="nav nav-tabs nav-justified" role="tablist" id="controlstab">
+						<li role="presentation" class="active" style="display:table-cell !important;"><a href="#controltemp" aria-controls="controltemp" role="tab" data-toggle="tab">Temp/SD</a></li>
+						<li role="presentation" style="display:table-cell !important;"><a href="#controlrel" aria-controls="controlrel" role="tab" data-toggle="tab">XYZE (Rel)</a></li>
+						<li role="presentation" style="display:table-cell !important;"><a href="#controlabs" aria-controls="controlabs" role="tab" data-toggle="tab">XYZ (Abs)</a></li>
+					</ul>
+
+					<!-- Tab panes -->
+					<div class="tab-content" style="padding-top: 10px; padding-bottom: 20px;">
+						
+							<div role="tabpanel" class="tab-pane active" id="controltemp">
+							
+								<div class="temp-panel" style="display: inline-block; width: 200px;">
+								<h2>Extruder</h2>
+									<div>
+										Current: <span id="temp_ext_current">0.0</span>
+										Target: <span id="temp_ext_target">0.0</span>
+									</div>
+									<div>
+										<div class="input-group">
+										  <div class="input-group-addon">°C</div>
+										  <input type="text" class="form-control" id="temp_extruder_target_set" placeholder="0">
+										  <span class="input-group-btn">
+											<button class="btn btn-default" type="button" onclick="javascript:  SendGCodeDirect('M104 S'+$('#temp_extruder_target_set').val()); ">New Target</button>
+										  </span>
+										</div>
+									</div>
+								</div>
+							
+								<div class="tempbed-panel"  style="display: inline-block; width: 200px;">
+								<h2>Bed</h2>
+									<div>
+										Current: <span id="temp_bed_current">0.0</span>
+										Target: <span id="temp_bed_target">0.0</span>
+									</div>
+									<div>
+										<div class="input-group">
+										  <div class="input-group-addon">°C</div>
+										  <input type="text" class="form-control" id="temp_bed_target_set" placeholder="0">
+										  <span class="input-group-btn">
+											<button class="btn btn-default" type="button" onclick="javascript:  SendGCodeDirect('M140 S'+$('#temp_bed_target_set').val()); ">New Target</button>
+										  </span>
+										</div>
+									</div>
+								</div>
+							
+								<h2>SD Card</h2>
+								<div class="input-group">
+									<span class="input-group-btn">
+										<button class="btn btn-default" id="btnrefresh" type="button" onclick="javascript: refreshSD();"><span class="glyphicon glyphicon-refresh"></span></button>
+									</span>
+									<select id="select_files" class="form-control"  style="min-width: 75px;">
+									</select>
+									
+									<div class="input-group-btn" id="btngroup-fileprint">
+										  <button type="button" class="btn btn-primary" onclick="javascript: SendGCodeDirect('M32 '+$('#select_files option:selected').text()); "><span class="glyphicon glyphicon-print"></span> Print (M32)</button>
+										  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+											<span class="caret"></span>
+											<span class="sr-only">Toggle Dropdown</span>
+										  </button>
+										  <ul class="dropdown-menu" role="menu">
+											<li><a href="#" onclick="javascript: SendFullPrintStop(); "><span class="glyphicon glyphicon-stop"></span><b> Stop Printing (Custom)</b></a></li>
+											<li class="divider"></li>
+											<li><a href="#" onclick="javascript: SendGCodeDirect('M23 '+$('#select_files option:selected').text()); "><span class="glyphicon glyphicon-ok"></span> Select (M23)</a></li>
+											<li><a href="#" onclick="javascript: SendGCodeDirect('M24'); "><span class="glyphicon glyphicon-play"></span> Start / Resume (M24)</a></li>
+											<li><a href="#" onclick="javascript: SendGCodeDirect('M25'); "><span class="glyphicon glyphicon-pause"></span> Pause (M25)</a></li>
+											<li><a href="#" onclick="javascript: SendGCodeDirect('M26 S0'); "><span class="glyphicon glyphicon-step-backward"></span> Reset FPos (M26 S0)</a></li>
+											<li class="divider"></li>
+											<!-- <li><a href="#" onclick="javascript: UploadFile(); "><span class="glyphicon glyphicon-upload"> Upload...</a></li>-->
+											<li><a href="#" onclick="javascript: SendGCodeDirect('M30 '+$('#select_files option:selected').text()); "><span class="glyphicon glyphicon-trash"></span> Delete (M30)</a></li>
+										  </ul>
+									</div>
+									
+								</div><!-- /input-group -->	
+								<h2>Lights</h2>
+								<div class="input-group">
+									ON: <button type="button" class="btn btn-default glyphicon glyphicon glyphicon-eye-open" onclick="javascript: SendGCodeDirect(settings.Printer.gcode_lights_on); "></button>
+									OFF: <button type="button" class="btn btn-default glyphicon glyphicon glyphicon-eye-close" onclick="javascript: SendGCodeDirect(settings.Printer.gcode_lights_off); "></button>
+								
+								</div><!-- /input-group -->	
+											
+						</div>
+						
+						
+						<div role="tabpanel" class="tab-pane" id="controlrel">
+							
+							<!-- Panel for xy axes -->
+							
+							<div class="rel-xy-panel" style="display: inline-block; vertical-align: top; min-width: 150px;">
+								<h2>X/Y</h2>
+								<div>
+									<button type="button" style="margin: 0px 0px 5px 44px;  " class="btn btn-default glyphicon glyphicon glyphicon-chevron-up" onclick="javascript: SendMoveRel('Y'); "></button>
+								</div>
+								<div>
+									<button type="button" class="btn btn-default glyphicon glyphicon-chevron-left" onclick="javascript: SendMoveRel('X-'); "></button>
+									<button type="button" class="btn btn-default glyphicon glyphicon-home" onclick="javascript: SendGCodeDirect('G28 X Y'); "></button>
+									<button type="button" class="btn btn-default glyphicon glyphicon-chevron-right" onclick="javascript: SendMoveRel('X'); "></button>
+								</div>
+								<div>
+									<button type="button" style="margin: 5px 0px 0px 44px;  " class="btn btn-default glyphicon  glyphicon-chevron-down" onclick="javascript: SendMoveRel('Y-'); "></button>
+								</div>
+							</div>
+							
+							<div class="rel-z-panel" style="display: inline-block;  vertical-align: top; margin-left: 10px;">
+								<h2>Z</h2>
+								<div>
+									<button type="button" style="margin: 0px 0px 5px 0px; " class="btn btn-default glyphicon glyphicon glyphicon-chevron-up" onclick="javascript: SendMoveRel('Z-'); "></button>
+								</div>
+								<div>
+									<button type="button" class="btn btn-default glyphicon glyphicon-home" onclick="javascript: SendGCodeDirect('G28 Z'); "></button>
+								</div>
+								<div>
+									<button type="button" style="margin: 5px 0px 0px 0px; " class="btn btn-default glyphicon  glyphicon-chevron-down" onclick="javascript: SendMoveRel('Z'); "></button>
+								</div>
+							</div>
+							
+							
+							<div class="dist-panel" style="display: inline-block; vertical-align: top; margin-left: 20px;">
+								<h2>Steps</h2>
+								   <div class="btn-group" style="min-width: 200px;" data-toggle="buttons" id="rel-moveby">
+                                        
+										<label class="btn btn-default">
+											<input type="radio" name="options" id="option1" autocomplete="off" value="0.1"> 0.1
+										</label>
+										<label class="btn btn-default">
+											<input type="radio" name="options" id="option2" autocomplete="off" value="1"> 1
+										</label>
+										<label class="btn btn-default active">
+											<input type="radio" name="options" id="option3" autocomplete="off" value="10" checked> 10
+										</label>
+										<label class="btn btn-default">
+											<input type="radio" name="options" id="option4" autocomplete="off" value="100"> 100
+										</label>
+										
+                                    </div>
+                            </div>
+							
+							<h2>Extrude</h2>
+							<div class="rel-e-panel" style="margin-top: 5px;  min-width: 250px;">
+									<div>
+										<div class="input-group">
+										  <div class="input-group-addon">mm</div>
+										  <input type="text" class="form-control" id="temp_extrude_mm" placeholder="0">
+										  <span class="input-group-btn">
+											<button class="btn btn-default" type="button" onclick="javascript:  SendMoveRel('E'); ">E</button>
+											<button class="btn btn-default" type="button" onclick="javascript:  SendMoveRel('E-'); ">R</button>
+										  </span>
+										</div>
+								</div>
+							</div>
+							
+														
+							
+							
+							
+							
+							
+												
+						</div>
+						<div role="tabpanel" class="tab-pane" id="controlabs">
+							<label for="directsendxyz">Directsend: <input type="checkbox" autocomplete="off" id="directsendxyz"></label>
+							
+							<label for="wrapnavi">Move to X,Y 
+								<button type="button" class="btn btn-default btn-xs glyphicon glyphicon-home" onclick="javascript: $('#gcodecommand').val('G28 X Y'); if ($('#directsendxyz').is(':checked')){SendGCode();} "></button>
+								, Z 
+								<button type="button" class="btn btn-default btn-xs glyphicon glyphicon-home" onclick="javascript: $('#gcodecommand').val('G28 Z'); if ($('#directsendxyz').is(':checked')){SendGCode();}  "></button>
+							</label>
+				
+							<div id="wrapnavi" style="display: block; width:305px !important;">
+								<div id="XY" style="float:left; width:250px;height:250px;background:#cccccc;color:#fff;  outline: #eeeeee solid 1px; margin-right: 5px;"></div>
+								<div id="Z" style="width:50px;height:250px;background:#dddddd;color:#fff;  outline: #eeeeee solid 1px;"></div>	
+							</div>
+													
+						</div>
+
+				
+					</div>
+				
+			
+			</div>
+	</div>
+
+
+	<div class="row">
+		<div class="col-xs-12">
+			<div class="form-group">
+			  <label for="comment">Serial Interface <button type="button" class="btn btn-default btn-xs glyphicon glyphicon-refresh" onclick="javascript: GetSerialStatus(); "></button>, </label>
+			  <label for="autoupdate">Autoupdate <input type="checkbox" autocomplete="off" id="autoupdate" onchange="javascript: ToggleAutoUpdate(); "></label>
+			  <!-- <textarea class="form-control custom-control" style="resize:none; white-space: pre-wrap; overflow: auto;" rows="5" id="serialstatus_"></textarea> -->
+			  <div id="serialstatus" class="form-control custom-control" style="height: 150px; overflow: auto; white-space: nowrap;"></div>
+			</div>
+
+			<div class="form-group">
+			</div>
+
+			<div class="input-group">
+			  <input type="text" id="gcodecommand" class="form-control" placeholder="gcode command to send" aria-describedby="gcodesend">
+			  <span class="input-group-addon btn btn-primary" id="gcodesend" onclick="javascript: SendGCode(); ">send</span>
+			</div>
+		</div>
+	</div>
+</div>
+{% end %}	
+  

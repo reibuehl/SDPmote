@@ -1,0 +1,798 @@
+﻿<!--
+#  File: base.html
+#  Description: base html with the main, general code file with blocks to be filled by tornado from python, container
+#  
+#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Ultimaker timelapse">
+    <meta name="author" content="martin bienz">
+    <link rel="icon" href="favicon.ico">
+
+    <title>{% block title %}{{ title }}{% end %}</title>
+
+	<!-- CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/UltiCam.css" rel="stylesheet">
+	
+	<!-- JS -->
+	<script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+	<script src="js/bootstrap-switch.js"></script>
+	<script src="js/bootbox.min.js"></script>
+	<script src="js/crosshair.js"></script>
+	
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="js/ie10-viewport-bug-workaround.js"></script>
+	
+	<script>
+	
+	var camisactive = false;
+	var global_tlon=false;
+	var global_tlon_folder="";
+	
+
+	var settings;
+	
+	var save_sdrefresh;
+	
+	var myDialogs;
+	
+	$.ajaxSetup ({
+	// Disable caching of AJAX responses */
+	cache: false
+	});
+	
+	function RestartServer(){
+		
+		
+		bootbox.dialog({
+                title: "Confirmation",
+                message: '<div class="row">  ' +
+                    '<div class="col-md-12"> ' +
+                    '<form class="form-horizontal"> ' +
+                    '<div class="form-group"> ' +
+                    '<label class="col-md-4 control-label" for="whattorestart">I would like to:</label> ' +
+                    '<div class="col-md-4"> <div class="radio"> <label for="whattorestart-0"> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-0" value="app" checked="checked"> ' +
+                    'restart the <b>Application</b> </label> ' +
+                    '</div><div class="radio"> <label for="whattorestart-1"> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-1" value="server"> <b>restart</b> the <b>system</b> </label> ' +
+					'</div><div class="radio"> <label for="whattorestart-2"> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-2" value="shutdown"> <b>shutdown</b> the <b>system</b> </label> ' +
+                    '</div> ' +
+                    '</div> </div>' +
+                    '</form> </div>  </div>',
+                buttons: {
+					cancel: {
+						label: "Cancel",
+						className: "btn-default",
+						callback: function() { 
+						}
+					},
+                    main: {
+                        label: "do it!",
+                        className: "btn-danger",
+                        callback: function () {
+                            var what = $("input[name='whattorestart']:checked").val()
+							
+							if (what=='app') {
+								$.getJSON( '/com' , { op: "restartserver", mode : "app" } );
+							} else if (what=='server') {
+								$.getJSON( '/com' , { op: "restartserver", mode : "server" } );
+							} else if (what=='shutdown') {
+								$.getJSON( '/com' , { op: "restartserver", mode : "shutdown" } );
+							}
+							
+
+                        }
+                    }
+                }
+            }
+        );
+			
+	}
+	
+	function ScreenShot() {
+		
+		if (camisactive) {
+		
+			myDialogs.showPleaseWait();
+		
+			params = { op: "screenshot" };
+			$.ajax({ 
+			 async: true, 
+			 type: 'GET',
+			 url: '/com', 
+			 data: params,
+			 dataType: "json",
+			 params: params,
+			 success: function(data) {
+				
+				//alert (data.ssfile);
+				myDialogs.hidePleaseWait();
+			  
+			}, 
+			});
+		}
+	};
+	
+	function GetSettings(){
+		
+		params = { op: "getsettings" };
+		$.ajax({ 
+         async: false, 
+		 type: 'GET',
+		 url: '/com', 
+		 data: params,
+         dataType: "json",
+		 params: params,
+         success: function(data) {
+            settings = data;
+		
+        }, 
+		});
+					
+	};
+	
+	function SaveSettings(){
+		
+		settings.General.pics_per_second=$("#input_pics_per_second").val();
+
+		if ($("#tl_autostart").is(':checked')) {
+			settings.General.tl_autostart="True";
+		} else {
+			settings.General.tl_autostart="False";
+		}
+		
+		if ($("#tl_autostop").is(':checked')) {
+			settings.General.tl_autostop="True";
+		} else {
+			settings.General.tl_autostop="False";
+		}
+		
+		if ($("#email_on_complete").is(':checked')) {
+			settings.General.email_on_complete="True";
+		} else {
+			settings.General.email_on_complete="False";
+		}
+		
+		if ($("#lights_off_oncomplete").is(':checked')) {
+			settings.General.lights_off_oncomplete="True";
+		} else {
+			settings.General.lights_off_oncomplete="False";
+		}
+		
+		if ($("#lights_on_onstart").is(':checked')) {
+			settings.General.lights_on_onstart="True";
+		} else {
+			settings.General.lights_on_onstart="False";
+		}
+		
+		settings.General.email_to=$("#input_email_to").val();
+		settings.General.email_user=$("#input_email_user").val();
+		settings.General.email_pw=$("#input_email_pw").val();
+		settings.General.email_server=$("#input_email_server").val();
+		settings.General.email_server_port=$("#input_email_server_port").val();
+				
+		settings.Webserver.mjpg_ip=$("#input_mjpg_ip").val();
+		settings.Webserver.mjpg_port=$("#input_mjpg_port").val();
+		settings.Webserver.mjpg_urlsnapshot=$("#input_mjpg_urlsnapshot").val();
+		settings.Webserver.mjpg_urlstream=$("#input_mjpg_urlstream").val();
+		settings.Webserver.tornadoport=$("#input_tornadoport").val();
+			
+		settings.Serial.serial_port=$("#input_serial_port").val();
+		settings.Serial.serial_baud=$("#input_serial_baud").val();
+		settings.Serial.web_serial_ln_buffer=$("#input_serial_web_serial_ln_buffer").val();
+		
+		settings.Printer.x_max_mm=$("#input_x_max_mm").val();
+		settings.Printer.y_max_mm=$("#input_y_max_mm").val();
+		settings.Printer.z_max_mm=$("#input_z_max_mm").val();
+		
+		settings.Printer.gcode_lights_on=$("#gcode_lights_on").val();
+		settings.Printer.gcode_lights_off=$("#gcode_lights_off").val();
+		
+		
+
+		//NEED to stringify as CMD handler of Tornado can not handle direct json as param
+		params = { op: "savesettings", config: JSON.stringify(settings) };
+		
+		$.ajax({ 
+         async: false, 
+		 type: 'GET',
+		 url: '/com', 
+		 data: params,
+         dataType: "json",
+		 params: params,
+         success: function(data) {
+                 if (data.status=="ok") {
+					$('#settingsModal').modal('hide');
+				}
+		   }, 
+		});
+					
+	};
+		
+	GetSettings();	
+	
+	myDialogs = myDialogs || (function () {
+	
+	var pleaseWaitDiv = $('<div class="modal fade" id="pleaseWaitDialog" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress"><div id="progress_download" class="progress-bar progress-bar-striped active"  role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"><span class="sr-only">100% Complete</span></div></div></div></div></div></div>');
+    return {
+			showPleaseWait: function() {
+				pleaseWaitDiv.modal({
+						show: true,
+						keyboard: false,
+						backdrop: 'static'
+				});
+
+					
+			},
+			hidePleaseWait: function () {
+				pleaseWaitDiv.modal('hide');
+			},
+
+		};
+	})();
+	
+	
+	function serverResponded( data ) {
+    /* 
+    log the event data, so you can see what's going on.
+    Shows up in the console on your browser. (Chrome: Tools > Developer Tools > Console)
+    */
+    console.log( data );
+	
+	if (!jQuery.isEmptyObject(data.printer)) {
+		/* Printerstatus is not empty, handle it  */
+		//alert("Printer Heating up:"+data.printer.isheatingup); 
+		
+		if (data.printer.isprinting) {
+			$('#umstatus').html("Status: "+data.printer.status+" "+ "File: "+data.printer.file[0]
+										//+" SD Refresh: "+data.printer.sdrefresh
+										);
+		}
+		else
+		{
+			$('#umstatus').html("Status: "+data.printer.status);
+		}
+		
+		
+		if (!$('#umstatus_temp').is(':visible')) {$('#umstatus_temp').show();}
+		//$('#umstatus_temp').show();
+		$('#umstatus_temp').html("Extruder: "+data.printer.temp[0]+"°/ "+data.printer.temp[1]+
+									"° Bed: "+data.printer.temp[2]+"°/ "+data.printer.temp[3]+"°"
+								);
+		
+		
+
+		if (data.printer.isprinting) {
+			if (!$('#print_progress_div').is(':visible')) {$('#print_progress_div').show();}
+			//$('#print_progress_div').show();
+			$('#progress_print').css('width', data.printer.progress[0]+'%').attr('aria-valuenow', data.printer.progress[0]);
+			$('#progress_print').html(data.printer.progress[0]+'%');
+			
+			$('#progress_print_ptl').html("Print time left: "+data.printer.progress_time[2]);
+		}
+		else
+		{
+			if ($('#print_progress_div').is(':visible')) {$('#print_progress_div').hide();}
+		}
+		
+		if($("#temp_ext_current").length != 0) {
+			$("#temp_ext_current").html(data.printer.temp[0]);
+			$("#temp_ext_target").html(data.printer.temp[1]);
+			$("#temp_bed_current").html(data.printer.temp[2]);
+			$("#temp_bed_target").html(data.printer.temp[3]);
+		}
+		
+		
+		//sd files refreshed
+		if (save_sdrefresh != data.printer.sdrefresh) {
+			//update and 
+			if (!jQuery.isEmptyObject(data.printer.sdfiles)) { 
+				
+				if($("#select_files").length != 0) { //it exists
+					
+					$('#select_files').children().remove();
+								
+					
+					for (var i = 0; i < data.printer.sdfiles.length; i++) {
+					//alert(data.printer.sdfiles[i]);
+					$('#select_files').append('<option>'+data.printer.sdfiles[i]+'</option>');
+
+					$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span>');
+					$('#btnrefresh').prop('disabled', false);
+					$('#select_files').prop('disabled', false);
+					$('#btngroup-fileprint button').removeAttr('disabled');
+					
+				}
+					
+				
+				}
+				
+				
+			
+			}
+			save_sdrefresh = data.printer.sdrefresh;
+		}
+		
+		
+	}
+	
+	
+    global_tlon=data.cam.tlon;
+	global_tlon_folder=data.cam.tlfolder_name;
+    // add the last status to the div on the screen
+    // $('#div-status .usedvalue').html( data.spaceused + " (" + data.spaceusedpercent + "%)" );
+	//$('.freevalue').html( data.cam.spacefree + " (" + data.cam.spacefreepercent + "%)");
+	$('.freevalue').html( data.cam.spacefree + " free");
+	
+	$('#progress_space').css('width', data.cam.spaceusedpercent+'%').attr('aria-valuenow', data.cam.spaceusedpercent);
+	$('#progress_space').html(data.cam.spaceusedpercent+'%');
+	
+	
+	if (global_tlon) {
+		rec_icon='<span class="glyphicon glyphicon-stop"></span> ';
+	}
+	else
+	{
+		rec_icon='<span class="glyphicon glyphicon-play"></span> ';
+	}
+	
+	
+	$('#tlbutton_menu').html(rec_icon + data.cam.tlstatus);
+	
+	if (data.cam.camonline) {
+		camisactive=true;
+		$('#tlbutton').removeClass( "disabled" );
+		$('#tlbutton_menu_li').removeClass( "disabled" );
+		$('#tlbutton_ss').removeClass( "disabled" );
+		$('#tlbutton_menu_ss').removeClass( "disabled" );
+		
+		}
+		else
+		{
+		camisactive=false;
+		$('#tlbutton').addClass( "disabled" );
+		$('#tlbutton_menu_li').addClass( "disabled" );
+		$('#tlbutton_ss').addClass( "disabled" );
+		$('#tlbutton_menu_ss').addClass( "disabled" );
+		}
+	
+	
+	if (global_tlon) {rec_status_icon="<span class='glyphicon glyphicon-time'></span> "; } else {rec_status_icon="";}
+	$('.recordingstatus').html( rec_status_icon + data.cam.recordingstatus);
+		
+	
+	}
+	
+	function ToggleTL(){
+	
+	if (camisactive) {
+	
+		if (global_tlon==false) {
+				bootbox.prompt("Timelapse Name?", function(result) {                
+				  if (result === null) {                                             
+					   params = { op: "toggletimelapse", tlfolder: "" };
+				  } else {
+					params = { op: "toggletimelapse", tlfolder: result };
+				  }
+				$.getJSON( '/com' , params );
+				});
+			}
+			else{
+			params = { op: "toggletimelapse", tlfolder: "" };
+			$.getJSON( '/com' , params );
+			}
+	}
+	}
+	
+	function ShowSettings(){
+		
+		GetSettings();
+		
+		$("#input_mjpg_ip").val(settings.Webserver.mjpg_ip);
+		$("#input_mjpg_port").val(settings.Webserver.mjpg_port);
+		$("#input_mjpg_urlsnapshot").val(settings.Webserver.mjpg_urlsnapshot);
+		$("#input_mjpg_urlstream").val(settings.Webserver.mjpg_urlstream);
+		$("#input_tornadoport").val(settings.Webserver.tornadoport);
+		
+		$("#input_pics_per_second").val(settings.General.pics_per_second);
+		
+		
+		if (settings.General.tl_autostart == "True") {
+			$("#tl_autostart").attr('checked', true);
+		} else {
+			$("#tl_autostart").attr('checked', false);
+		}
+		if (settings.General.tl_autostop == "True") {
+			$("#tl_autostop").attr('checked', true);
+		} else {
+			$("#tl_autostop").attr('checked', false);
+		}
+		if (settings.General.email_on_complete == "True") {
+			$("#email_on_complete").attr('checked', true);
+		} else {
+			$("#email_on_complete").attr('checked', false);
+		}
+		
+		if (settings.General.lights_off_oncomplete == "True") {
+			$("#lights_off_oncomplete").attr('checked', true);
+		} else {
+			$("#lights_off_oncomplete").attr('checked', false);
+		}
+		
+		if (settings.General.lights_on_onstart == "True") {
+			$("#lights_on_onstart").attr('checked', true);
+		} else {
+			$("#lights_on_onstart").attr('checked', false);
+		}
+		
+		$("#input_email_to").val(settings.General.email_to);
+		$("#input_email_user").val(settings.General.email_user);
+		$("#input_email_pw").val(settings.General.email_pw);
+		$("#input_email_server").val(settings.General.email_server);
+		$("#input_email_server_port").val(settings.General.email_server_port);
+				
+		$("#input_serial_port").val(settings.Serial.serial_port);
+		$("#input_serial_baud").val(settings.Serial.serial_baud);
+		$("#input_serial_web_serial_ln_buffer").val(settings.Serial.web_serial_ln_buffer);
+		
+		$("#input_x_max_mm").val(settings.Printer.x_max_mm);
+		$("#input_y_max_mm").val(settings.Printer.y_max_mm);
+		$("#input_z_max_mm").val(settings.Printer.z_max_mm);
+		
+		$("#gcode_lights_on").val(settings.Printer.gcode_lights_on);
+		$("#gcode_lights_off").val(settings.Printer.gcode_lights_off);
+		
+		
+		$('#settingsModal').modal('show');
+					
+		
+		//$('#settingstab a:last').tab('show');
+
+		
+	};
+		
+	function serverGet( param ) {
+		params = { op: param };
+		$.getJSON( '/com' , params, serverResponded );
+	}
+	
+	function serverGetBlock( param ) {
+		params = { op: param };
+		$.getJSON( '/com' , params, serverResponded );
+		
+		$.ajax({ 
+         async: false, 
+		 type: 'GET',
+		 url: '/com', 
+		 data: params,
+         dataType: "json",
+		 params: params,
+         success: function (data) { serverResponded( data ); }
+		});
+		
+	}
+	
+		
+	$(document).ready( function() {
+		
+	//check for server status AND schedule to do so every sec
+	//first call is async to make sure the status is loaded before the page scripts
+	
+	serverGetBlock("checkup");
+	reloadIntervalID = window.setInterval( "serverGet('checkup')" , 1000);
+	
+	
+	//function for the tabs in the settings section
+	$("#settingstab a").click(function(e){
+    	e.preventDefault();
+    	$(this).tab('show');
+    });
+
+	});
+	
+	
+
+	{% block pagescript %}{% end %}
+	
+	
+	
+	
+
+	</script>
+</head>
+
+ <body id="mainBody">
+	
+<!-- Modal for Settings  -->
+<div class="modal fade" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">Settings</h4>
+      </div>
+      <div class="modal-body">
+		<div role="tabpanel">
+
+			<!-- Nav tabs -->
+			<ul class="nav nav-tabs" role="tablist" id="settingstab">
+				<li role="presentation" class="active"><a href="#general" aria-controls="general" role="tab" data-toggle="tab">General</a></li>
+				<li role="presentation"><a href="#webserver" aria-controls="webserver" role="tab" data-toggle="tab">Webserver / MJPG</a></li>
+				<li role="presentation"><a href="#serial" aria-controls="serial" role="tab" data-toggle="tab">Serial</a></li>
+				<li role="presentation"><a href="#gcode" aria-controls="gcode" role="tab" data-toggle="tab">Printer / gcode</a></li>
+			</ul>
+
+			<!-- Tab panes -->
+			<div class="tab-content" style="padding-top: 15px;">
+				<div role="tabpanel" class="tab-pane active" id="general">
+					
+					<form class="form-horizontal" role="form">
+					  <div class="form-group">
+						<label for="input_pics_per_second" class="col-sm-5 control-label">Picture every (n) seconds</label>
+						<div class="col-sm-7">
+						  <input type="number" class="form-control" id="input_pics_per_second">
+						</div>
+					  </div>
+					  <div class="form-group">
+						<label for="tl_autostart" class="col-sm-5 control-label">AutoSTART Timelapse </label>
+						<div class="col-sm-7"><input type="checkbox" class="form-control" id="tl_autostart"></div>
+						<label for="tl_autostop" class="col-sm-5 control-label">AutoSTOP Timelapse </label>
+						<div class="col-sm-7"><input type="checkbox" class="form-control" id="tl_autostop"></div>
+					  </div>
+					  <div class="form-group">
+						<label for="tl_autostart" class="col-sm-5 control-label">Send email on print complete </label>
+						<div class="col-sm-7">
+						  <input type="checkbox" class="form-control" id="email_on_complete">
+						</div>
+					  </div>
+					  <div class="form-group">
+						<label for="lights_on_onstart" class="col-sm-5 control-label">Lights ON on print start </label>
+						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_on_onstart"></div>
+						<label for="lights_off_oncomplete" class="col-sm-5 control-label">Lights OFF on print complete  </label>
+						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_off_oncomplete"></div>
+					  </div>
+					  <div class="form-group">
+						<label for="input_email_to" class="col-sm-5 control-label">Send email to </label>
+						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_to"></div>
+					  </DIV>
+					  <div class="form-group">
+						<label for="input_email_user" class="col-sm-5 control-label">email username (smtp) </label>
+						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_user"></div>
+						<label for="input_email_pw" class="col-sm-5 control-label">email password (smtp) </label>
+						<div class="col-sm-7"><input type="password" class="form-control" id="input_email_pw"></div>
+						<label for="input_email_server" class="col-sm-5 control-label">email server (smtp) </label>
+						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_server"></div>
+						<label for="input_email_server_port" class="col-sm-5 control-label">email server port (smtp)</label>
+						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_server_port"></div>
+						
+					  </div>
+				  </form>
+					
+					
+				</div>
+				<div role="tabpanel" class="tab-pane" id="webserver">
+					
+					<form class="form-horizontal" role="form">
+					  <div class="form-group">
+						<label for="input_tornadoport" class="col-sm-5 control-label">Tornado / Web Port</label>
+						<div class="col-sm-7">
+						  <input type="number" class="form-control" id="input_tornadoport">
+						</div>
+					  </div>
+					  <div class="form-group">
+						<label for="input_mjpg_ip" class="col-sm-5 control-label">MJPG IP Adress</label>
+						<div class="col-sm-7">
+						  <input type="text" class="form-control" id="input_mjpg_ip">
+						</div>
+					  </div>
+					  <div class="form-group">
+						<label for="input_mjpg_port" class="col-sm-5 control-label">MJPG IP Port</label>
+						<div class="col-sm-7">
+						  <input type="number" class="form-control" id="input_mjpg_port">
+						</div>
+					  </div>
+					  <div class="form-group">
+						<label for="input_mjpg_urlsnapshot" class="col-sm-5 control-label">MJPG Snapshot Command</label>
+						<div class="col-sm-7">
+						  <input type="text" class="form-control" id="input_mjpg_urlsnapshot">
+						</div>
+					  </div>
+					  <div class="form-group">
+						<label for="input_mjpg_urlstream" class="col-sm-5 control-label">MJPG Stream Command</label>
+						<div class="col-sm-7">
+						  <input type="text" class="form-control" id="input_mjpg_urlstream">
+						</div>
+					  </div>
+					  
+					</form>
+				</div>
+				<div role="tabpanel" class="tab-pane" id="serial">
+					<form class="form-horizontal" role="form">
+						  <div class="form-group">
+							<label for="input_serial_port" class="col-sm-5 control-label">Serial Port</label>
+							<div class="col-sm-7">
+							  <input type="text" class="form-control" id="input_serial_port">
+							</div>
+						  </div>
+						  <div class="form-group">
+							<label for="input_serial_baud" class="col-sm-5 control-label">Serial Baud</label>
+							<div class="col-sm-7">
+							  <input type="number" class="form-control" id="input_serial_baud">
+							</div>
+						  </div>
+						  <div class="form-group">
+							<label for="input_serial_web_serial_ln_buffer" class="col-sm-5 control-label">Serial Line Buffer (web interface)</label>
+							<div class="col-sm-7">
+							  <input type="number" class="form-control" id="input_serial_web_serial_ln_buffer">
+							</div>
+						  </div>
+					</form>
+				</div>
+				<div role="tabpanel" class="tab-pane" id="gcode">
+					<form class="form-horizontal" role="form">
+							  <div class="form-group">
+								<label for="input_x_max_mm" class="col-sm-5 control-label">Build Plate, X (mm)</label>
+								<div class="col-sm-7">
+								  <input type="number" class="form-control" id="input_x_max_mm">
+								</div>
+							  </div>
+							  <div class="form-group">
+								<label for="input_y_max_mm" class="col-sm-5 control-label">Build Plate, Y (mm)</label>
+								<div class="col-sm-7">
+								  <input type="number" class="form-control" id="input_y_max_mm">
+								</div>
+							  </div>
+							  <div class="form-group">
+								<label for="input_z_max_mm" class="col-sm-5 control-label">Build Plate, Z (mm)</label>
+								<div class="col-sm-7">
+								  <input type="number" class="form-control" id="input_z_max_mm">
+								</div>
+							  </div>
+							  <div class="form-group">
+								<label for="gcode_lights_on" class="col-sm-5 control-label">Lights ON gcode</label>
+								<div class="col-sm-7">
+								  <input type="text" class="form-control" id="gcode_lights_on">
+								</div>
+							  </div>
+							  <div class="form-group">
+								<label for="gcode_lights_off" class="col-sm-5 control-label">Lights OFF gcode</label>
+								<div class="col-sm-7">
+								  <input type="text" class="form-control" id="gcode_lights_off">
+								</div>
+							  </div>
+						</form>
+					</div>
+			</div>
+
+		</div>
+						
+	  </div>
+      
+	  <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+		<button type="button" onclick="javascript: SaveSettings(); "id="SaveSettings" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+    <!-- Fixed navbar -->
+    <div class="navbar navbar-default navbar-static-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+		  <a class="navbar-brand" href="/"><img src="/images/um_logo_sm.png" alt="" style="padding-right: 5px; height: 100%;">{{ title }}</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+			{% block navigation %} {% end %}
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+             <li class="dropdown">
+              <a href="javascript: void(0);" class="dropdown-toggle" data-toggle="dropdown">menu <span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li id="tlbutton_menu_li"><a href="javascript: void(0);" id="tlbutton_menu" onclick="javascript: ToggleTL(); ">Toggle Timelapse</a></li>
+				<li id="tlbutton_menu_ss"><a href="javascript: void(0);" id="tlbutton_ss" onclick="javascript: ScreenShot(); "><span class="glyphicon glyphicon-camera"></span> take picture</a></li>
+                <li class="divider"></li>
+                <li class="dropdown-header">commands</li>
+				<li><a href="javascript: void(0);" onclick="javascript: ShowSettings(); "><span class="glyphicon glyphicon-cog"></span> settings</a></li>
+                <li><a href="javascript: void(0);" onclick="javascript: RestartServer(); "><span class="glyphicon glyphicon-repeat"></span> restart / shutdown</a></li>
+                </ul>
+            </li>
+          </ul>
+        </div><!--/.nav-collapse -->
+		<hr style="margin: 0; padding: 0; padding-bottom: 5px;" />
+		<div class="container">
+                
+				<div class="row" style="margin-top: 5px; ">
+                    <div class="col-sm-3">
+               			<span class="recordingstatus">Status loading...</span>
+                    </div>
+					<div class="col-sm-9">
+						<span class="pull-left" style="padding-right: 2px;">Diskstatus:</span>
+						<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
+							<div id="progress_space" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+							0%
+							</div>
+						</div>
+						<span class="freevalue pull-left" style="padding-left: 2px;"></span>
+					</div>
+                </div>
+				<div class="row" style="margin-top: 5px; margin-bottom: 5px; ">
+                    <div class="col-sm-3">
+               			<span id="umstatus">No serial connection...</span>	
+                    </div>
+					<div class="col-sm-4">
+						<span id="umstatus_temp"  style="display: none;">Temp: E: 0.0°C, B: 0.0°C</span>
+					</div>
+					
+					<div class="col-sm-5">
+                      
+					  <div id="print_progress_div" style="display: none;">	
+							<span class="pull-left" style="padding-right: 2px;">Print progress:</span>
+							<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
+								<div id="progress_print" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+								0%
+								</div>
+							</div>
+							<span id="progress_print_ptl">Estimating time left...</span>
+						</div>
+						
+                    </div>
+                </div>
+				
+        </div>
+	
+	  </div>
+	</div>	
+
+	<div class="container">
+
+	{% block content %}{% end %}
+	
+     <footer class="text-center">
+        <div class="footer">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-18">
+                        <hr />
+						Copyright &copy; Martin Bienz 2016 - {{ title }} server <b>{{ servername }}</b> is running <b>{{ osname }}</b>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    </div> <!-- /container -->
+
+	
+
+  </body>
+</html>

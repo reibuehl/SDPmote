@@ -1,0 +1,124 @@
+﻿<!--
+#  File: index.html
+#  Description: main index page
+#  
+#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#
+-->
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Camera view{% end %}
+
+{% block pagescript %}
+
+var imageNr = 0; // Serial number of current image
+var finished = new Array(); // References to img objects which have finished downloading
+var paused = false;
+
+function ismsie() {
+        var ua = window.navigator.userAgent;
+        var msie = ua.indexOf("MSIE ");
+
+        if (msie > 0 || !!navigator.userAgent.match(/Trident.*rv\:11\./))      // If Internet Explorer, return version number
+            return true;
+        else                 // If another browser, return 0
+            return false;
+}
+
+function createImageLayer() {
+  var img = new Image();
+  img.style.position = "absolute";
+  img.style.zIndex = -1;
+  img.style.width = "640px";
+  img.style.height = "480px";
+  //img.style.width = "100%";
+  //img.style.height = "100%";
+  //img.style.minWidth = "320px";
+  //img.style.minHeight = "240px";
+  //img.style.maxWidth = "800px";
+      
+  img.onload = imageOnload;
+  img.onclick = imageOnclick;
+  img.src = "http://" + settings.Webserver.mjpg_ip +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + "&n=" + (++imageNr);
+  var webcam = document.getElementById("webcam");
+  webcam.insertBefore(img, webcam.firstChild);
+  $('#wcstatus').html("Webcamstatus: Streaming (Frames streamed so far: " + imageNr + ")");
+}
+
+// Two layers are always present (except at the very beginning), to avoid flicker
+function imageOnload() {
+  this.style.zIndex = imageNr; // Image finished, bring to front!
+  while (1 < finished.length) {
+    var del = finished.shift(); // Delete old image(s) from document
+    del.parentNode.removeChild(del);
+  }
+  finished.push(this);
+  if (!paused) createImageLayer();
+}
+
+function imageOnclick() { // Clicking on the image will pause the stream
+  paused = !paused;
+  if (!paused) {
+	createImageLayer();
+	$('#wcstatus').html("Webcamstatus: Streaming"); }
+  else {
+	$('#wcstatus').html("Webcamstatus: Stopped");
+  }
+}
+
+function setCam() {
+
+	if (camisactive){
+				
+		
+		if (ismsie() == true) { 
+			$('#webcam').html('<noscript><img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + '" /></noscript>');
+			$('#webcam').css("height", "480px");
+			
+			createImageLayer();
+			$('#wcstatus').html("Webcamstatus: Webcam streaming");
+			}
+		else {
+			//for everything else, start mjpeg streming directly in browser...
+			$('#webcam').html('<img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlstream + '" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 800px;" />');
+		}
+	}
+	else
+	{
+		$('#webcam').html('<img src="images/nocam.png" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px;" />');	
+	}
+}
+
+$(document).ready( function() {
+ setCam();
+});
+
+{% end %}
+
+{% block navigation %}
+	<li class="active"><a href="/"><span class="glyphicon glyphicon-camera"></span> view</a></li>
+    <li class=""><a href="um.html"><span class="glyphicon glyphicon-dashboard"></span> control</a></li>
+	<li class=""><a href="timelapses.html"><span class="glyphicon glyphicon-folder-open"></span> folders</a></li>
+{% end %}
+			
+{% block content %}	
+	<div id="webcam">Loading...</div>
+	<div id="wcstatus"></div>
+
+
+{% end %}	
+  
