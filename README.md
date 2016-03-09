@@ -61,4 +61,4 @@ python umcam.py --fullscreen --headless
 python umcam.py --fullscreen --hidemouse
 ```
 #configuration
-After the application started, you can point your browser to http://<yourPisIP>:8081 and start configuring the application using the web / tornado interface.
+After the application started, you can point your browser to http://`yourPisIP`:8081 and start configuring the application using the web / tornado interface.
