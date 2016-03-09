@@ -43,7 +43,20 @@ cd mjpg-streamer/mjpg-streamer-experimental
 export LD_LIBRARY_PATH=.
 make
 ```
-make sure mjpeg-streamer is running, best to run it as a deamon, look at 'raspi_stream', configure for your input device, make it executable and run it
+make sure mjpeg-streamer is running, best to run it as a deamon (or try with screen (```sudo apt-get install screen```)), look at 'raspi_stream' (in the root umcam folder, after the installation), configure for your input device, make it executable and run it.
+
+The command I Use for the raspi cam:
+```
+cd mjpg-streamer/mjpg-streamer-experimental
+./mjpg_streamer -i "./input_raspicam.so -fps 30 -x 1024 -y 768 -quality 90" -o "./output_http.so -w ./www"
+```
+For any standard USB Camera try (you can experiment with the settings, but try without first):
+```
+cd mjpg-streamer/mjpg-streamer-experimental
+./mjpg_streamer -i "./input_uvc.so" -o "./output_http.so -w ./www"
+```
+
+If it's up and running you can point your browser to http://```YourPisIP```:8080 and check if it's streaming.
 
 #install umcam
 ```
