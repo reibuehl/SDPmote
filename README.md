@@ -22,10 +22,12 @@ install dependencies
 ##pygame
 sudo apt-get install python-pygame
 
+
 ##install tornado / serial if required
 sudo apt-get install python-pip
 (sudo pip install pyserial)
 sudo pip install tornado
+
 
 ##make sure the user pi has access to the serial port
 sudo usermod -a -G tty pi
