@@ -1,4 +1,5 @@
-# umcam
+umcam
+-----
 Python app that uses an internal webserver (tornado) to serve a client to control your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs). It will run on Window, Linux and on the Raspberry Pi (wheezy, jessie).
 
 Credits
@@ -12,24 +13,25 @@ Credits
   - Tornado, http://www.tornadoweb.org/en/stable/
   - pyserial ()
 
-#Installation Routine (Raspberry Pi)
-
-Base configuration
+Installation (Raspberry Pi)
+--------
 Start with a fresh install of the latest wheezy or Jessie. Expand filesystem, install piTFT drivers, touchscreen interface etc.
 
-#install pygame
+install dependencies
+--------
+-pygame
 sudo apt-get install python-pygame
 
-#install tornado / serial if required
+-install tornado / serial if required
 sudo apt-get install python-pip
 (sudo pip install pyserial)
 sudo pip install tornado
 
-#make sure the user pi has access to the serial port
+-make sure the user pi has access to the serial port
 sudo usermod -a -G tty pi
 sudo usermod -a -G dialout pi
 
-#install mjpeg-streamer
+-install mjpeg-streamer
 cd ~
 sudo apt-get install git subversion libjpeg8-dev imagemagick libav-tools cmake
 git clone https://github.com/jacksonliam/mjpg-streamer.git
@@ -37,6 +39,16 @@ cd mjpg-streamer/mjpg-streamer-experimental
 export LD_LIBRARY_PATH=.
 make
 
-#install umcam
+- make sure mjpeg-streamer is running, best to run it as a deamon, look at 'raspi_stream', configure for your input device, make it executble and run it
+
+install umcam
+-------------
+-install umcam
 cd ~
 git clone https://github.com/MartinBienz/umcam.git
+
+-run with (no touchscreen):
+python umcam.py --fullscreen --headless
+
+-run with (pitft 2.8 / 320x240, touchscreen):
+python umcam.py --fullscreen --hidemouse
