@@ -25,7 +25,9 @@ sudo apt-get install python-pygame
 
 ##install tornado / serial if required
 sudo apt-get install python-pip
+
 (sudo pip install pyserial)
+
 sudo pip install tornado
 
 
