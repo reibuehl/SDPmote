@@ -1,0 +1,21 @@
+#!/bin/bash
+# Start / stop streamer
+
+Daemon=mjpg_streamer
+DaemonBase=~/mjpg-streamer/mjpg-streamer-experimental
+
+case "$1" in
+   start)
+         cd ${DaemonBase}
+		 ./mjpg_streamer -i "./input_raspicam.so -fps 30 -x 1024 -y 768 -quality 90" -o "./output_http.so -w ./www" >/dev/null 2>&1 &
+#        	 ./mjpg_streamer -i "./input_raspicam.so -fps 30 -x 640 -y 480 -quality 80" -o "./output_http.so -w ./www" >/dev/null 2>&1 &	 
+	echo "$0: started"
+     ;;
+   stop)
+         pkill -x ${Daemon}
+         echo "$0: stopped"
+     ;;
+   *)
+         echo "Usage: $0 {start|stop}" >&2
+     ;;
+esac
