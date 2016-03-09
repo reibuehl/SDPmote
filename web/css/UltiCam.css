@@ -1,0 +1,99 @@
+body {
+  padding-top: 0px;
+}
+/*@media (max-width: 979px) {
+  body {
+    padding-top: 0px;
+  }
+}
+
+.navbar-brand,
+.navbar-nav li a {
+    line-height: 60px;
+    height: 60px;
+    padding-top: 0;
+}
+.navbar {
+   min-height: 60px;
+}
+.dropdown-menu li a {
+    line-height: 40px;
+    height: 40px;
+    padding-top: 0;
+}
+*/
+
+.divide-nav{
+  /* height: 185px; */
+  /* background-color: #428bca; */
+}
+
+.thumb-hover {
+	min-height: 340px;
+}
+
+
+.thumb-hover:hover {
+	background-color: #eeeeee;
+    border: 0px solid #dddddd;
+    border-radius:3px;
+}
+/* Crosshair Style */
+.crosshair {
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+.crosshair img {
+  width: 100%;
+}
+.crosshair .hair {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-top: -3px;
+  margin-left: -2px;
+  background: transparent;
+  border-top: 3px solid black;
+  border-left: 3px solid black;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.5;
+}
+.crosshair .hair.hair-vertical {
+  height: 100%;
+}
+.crosshair .hair.hair-horizontal {
+  width: 100%;
+}
+.crosshair .crosshair-legend,
+.crosshair .crosshair-marker{
+  display: block;
+  position: absolute;
+}
+.crosshair .crosshair-legend {
+  top: 0;
+  left: 0;
+  background-color: black;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+  font-size: 10px;
+  padding: 3px;
+}
+.crosshair .crosshair-marker {
+  width: 5px;
+  height: 5px;
+  background-color: #aa1100;
+  -webkit-transition: all ease-in-out 0.2s;
+  -moz-transition: all ease-in-out 0.2s;
+  -o-transition: all ease-in-out 0.2s;
+  transition: all ease-in-out 0.2s;
+  opacity: 0.5;
+}
+
+footer {
+	padding-top: 25px;
+	padding-bottom: 25px;	
+}
+
