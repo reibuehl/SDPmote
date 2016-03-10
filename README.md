@@ -3,14 +3,14 @@ Python app that uses an internal webserver (tornado) to serve a client to contro
 The applications name is derived from Ultimaker ([Great 3D Printer](http://www.ultimaker.com)) **um** and the word camera, **cam**.
 
 #Credits
-- Octoprint, Gina Häussge, http://octoprint.org/
-- bootsrap, http://getbootstrap.com/
-- mjpeg-streamer, https://github.com/jacksonliam/mjpg-streamer
-- jquery, http://jquery.com/
-- python 2.7, https://www.python.org/
-  - pygame, http://www.pygame.org/hifi.html
-  - Tornado, http://www.tornadoweb.org/en/stable/
-  - pyserial ()
+- [Octoprint](http://octoprint.org/)
+- [bootsrap](http://getbootstrap.com/)
+- [mjpeg-streamer](https://github.com/jacksonliam/mjpg-streamer)
+- [jquery](http://jquery.com/)
+- [python](https://www.python.org/)
+  - [pygame](http://www.pygame.org/hifi.html)
+  - [Tornado](http://www.tornadoweb.org/en/stable/)
+  - [pyserial](https://github.com/pyserial/pyserial)
 
 #Installation (Raspberry Pi)
 
@@ -34,6 +34,8 @@ sudo pip install tornado
 sudo usermod -a -G tty pi
 sudo usermod -a -G dialout pi
 ```
+If there are any issues with a non-standard baudrate, like 250000, try to patch pyserial according to this [guide](https://github.com/foosel/OctoPrint/wiki/OctoPrint-support-for-250000-baud-rate-on-Raspbian). This should fix the connection issues. As far as I know, pyserial was patched some time ago, but until now, I could not test it on a new system.
+
 ##install mjpeg-streamer
 ```
 cd ~
