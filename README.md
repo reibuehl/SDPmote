@@ -12,6 +12,7 @@ The applications name is derived from Ultimaker ([Great 3D Printer](http://www.u
 - [Tornado](http://www.tornadoweb.org/en/stable/)
 - [pyserial](https://github.com/pyserial/pyserial)
 - [crosshair](https://github.com/eschmar/crosshair)
+- [bootbox.js](http://bootboxjs.com/)
 - [bootstrap-switch](https://github.com/mewsoft/bootstrap-switch)
 
 #Installation (Raspberry Pi)
