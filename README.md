@@ -22,10 +22,10 @@ Start with a fresh install of the latest wheezy or Jessie. Expand filesystem, in
 sudo apt-get install python-pygame
 ```
 
-##install tornado / pyserial if required
+##install tornado / pyserial
 ```
 sudo apt-get install python-pip
-(sudo pip install pyserial)
+sudo pip install pyserial
 sudo pip install tornado
 ```
 
@@ -64,14 +64,20 @@ cd ~
 git clone https://github.com/MartinBienz/umcam.git
 ```
 
-##run (no touchscreen):
+##run (no (touch)screen = no pygame interface):
 ```
-python umcam.py --fullscreen --headless
+python umcam.py --headless
 ```
 
 ##run (pitft 2.8 / 320x240, touchscreen):
 ```
 python umcam.py --fullscreen --hidemouse
 ```
+
+##run (GPIO enabled (I check fo sudo), no pygame interface)
+```
+sudo python umcam.py --headless
+```
+
 #configuration
 After the application started, you can point your browser to http://`yourPisIP`:8081 and start configuring the application using the web / tornado interface.
