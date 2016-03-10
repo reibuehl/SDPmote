@@ -8,9 +8,11 @@ The applications name is derived from Ultimaker ([Great 3D Printer](http://www.u
 - [mjpeg-streamer](https://github.com/jacksonliam/mjpg-streamer)
 - [jquery](http://jquery.com/)
 - [python](https://www.python.org/)
-  - [pygame](http://www.pygame.org/hifi.html)
-  - [Tornado](http://www.tornadoweb.org/en/stable/)
-  - [pyserial](https://github.com/pyserial/pyserial)
+- [pygame](http://www.pygame.org/hifi.html)
+- [Tornado](http://www.tornadoweb.org/en/stable/)
+- [pyserial](https://github.com/pyserial/pyserial)
+- [crosshair](https://github.com/eschmar/crosshair)
+- [bootstrap-switch](https://github.com/mewsoft/bootstrap-switch)
 
 #Installation (Raspberry Pi)
 
