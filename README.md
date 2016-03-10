@@ -1,7 +1,8 @@
 #umcam
-Python app that uses an internal webserver (tornado) to serve a client to control your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs). It will run on Window, Linux and on the Raspberry Pi (wheezy, jessie).
-The applications name is derived from Ultimaker ([Great 3D Printer](http://www.ultimaker.com)) **um** and the word camera, **cam**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer.
+Python app that uses an internal webserver (tornado) to serve a client to control / monitor your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs). It will run on Window, Linux and on the Raspberry Pi (wheezy, jessie). It also has a pygame interface included that can be used as a touchscreen interface when you have a piTFT (or similar with 320x240 resolution attached).
+The applications name is derived from Ultimaker ([Great 3D Printer](http://www.ultimaker.com)) **um** and the word camera, **cam**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer and one of the pygame interface.
 ![alt umcam_web](/documentation/umcam_web.JPG)
+![alt umcam_pygame](/documentation/umcam_pygameinterface.png)
 
 
 #Credits
