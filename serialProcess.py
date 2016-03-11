@@ -260,7 +260,7 @@ class SerialProcess_mp(multiprocessing.Process):
 			return False
 		
 		
-		if line.startswith('T:'):
+		if line.startswith('T:') and not self.printer_isprinting: 
 			news=True
 			#Warming up to print
 			self.printer_heatingup=True
@@ -287,7 +287,8 @@ class SerialProcess_mp(multiprocessing.Process):
 				else:
 					
 					self.print_start_countdown = int(match.group(1))
-					if self.print_start_countdown == 0:
+					#check if W: (countdown to print) is smaller or equal to 1, when only checking for 0 there were some issues, thanks Amedee
+					if self.print_start_countdown <= 1:
 						#tooggle print start with notification
 						self.toggle_startprint("Heating DONE, start printing.")
 						
