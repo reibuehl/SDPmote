@@ -28,19 +28,24 @@ Start with a fresh install of the latest wheezy or Jessie. Expand filesystem, in
 sudo apt-get install python-pygame
 ```
 
-##install tornado / pyserial
+##install tornado / pyserial 2.7 (force)
 ```
 sudo apt-get install python-pip
-sudo pip install pyserial
+sudo pip install pyserial==2.7
 sudo pip install tornado
 ```
+OR if you want to install tornado and pyserial for the current user only
+```
+pip install --user pyserial==2.7
+pip install --user tornado
+```
 
-##make sure the user pi has access to the serial port
+##make sure the user "pi" (or replace with your own user) has access to the serial port
 ```
 sudo usermod -a -G tty pi
 sudo usermod -a -G dialout pi
 ```
-If there are any issues with a non-standard baudrate, like 250000, try to patch pyserial according to this [guide](https://github.com/foosel/OctoPrint/wiki/OctoPrint-support-for-250000-baud-rate-on-Raspbian). This should fix the connection issues. As far as I know, pyserial was patched some time ago, but until now, I could not test it on a new system.
+If there are any issues with a non-standard baudrate, like 250000, try to patch pyserial (< 2.7) according to this [guide](https://github.com/foosel/OctoPrint/wiki/OctoPrint-support-for-250000-baud-rate-on-Raspbian). This should fix the connection issues. As far as I know, pyserial was patched some time ago, but until now, I could not test it on a new system.
 
 ##install mjpeg-streamer
 ```
@@ -51,7 +56,7 @@ cd mjpg-streamer/mjpg-streamer-experimental
 export LD_LIBRARY_PATH=.
 make
 ```
-make sure mjpeg-streamer is running, best to run it as a deamon (or try with screen (```sudo apt-get install screen```)), look at 'raspi_stream' (in the root umcam folder, after the installation), configure for your input device, make it executable and run it.
+make sure mjpeg-streamer is running BEFORE umcam starts, best to run it as a deamon (or try with screen (```sudo apt-get install screen```)), look at 'raspi_stream' (in the root umcam folder, after the installation), configure for your input device, make it executable and run it.
 
 The command I Use for the raspi cam:
 ```
@@ -74,16 +79,19 @@ git clone https://github.com/MartinBienz/umcam.git
 
 ##run (no (touch)screen = no pygame interface):
 ```
+cd umcam
 python umcam.py --headless
 ```
 
 ##run (pitft 2.8 / 320x240, touchscreen):
 ```
+cd umcam
 python umcam.py --fullscreen --hidemouse
 ```
 
 ##run (GPIO enabled (I check fo sudo), no pygame interface)
 ```
+cd umcam
 sudo python umcam.py --headless
 ```
 
