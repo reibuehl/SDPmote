@@ -1,7 +1,7 @@
 #  File: helpers.py
 #  Description: helper routines for email (threaded), timers, config parsing, diskusage, file system ...
 #  
-#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  Copyright 2016  Martin Bienz, bienzma@gmail.com
 #  
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -149,22 +149,23 @@ def fix_ownership(path):
 		os.chown(path, int(uid), int(gid))
 	
 #EMAIL sender function------------------------------------------------------------------------------------------------------------------
-#Usage: helpers.sendmail("bienzma@gmail.com", "Print done", "Print successful, took 2 hourse to print.", username, password, server, port)
+#Usage: helpers.sendmail("bienzma@gmail.com", "from@gmail.com", "Print done", "Print successful, took 2 hourse to print.", username, password, server, port)
 
 class EmailThread(threading.Thread):
-	def __init__(self, to, subject, text, attach, user, pw, server, port):
+	def __init__(self, to, efrom,  subject, text, attach, user, pw, server, port):
 		self.msg = MIMEMultipart()
 
 		self.text = text
 		self.attach = attach
 		self.to = to
+		self.efrom = efrom
 
 		self.gmail_user = user
 		self.gmail_pwd = pw
 		self.server=server
 		self.port=port
 
-		self.msg['From'] = self.gmail_user
+		self.msg['From'] = self.efrom
 		self.msg['To'] = self.to
 		self.msg['Subject'] = subject
 		print "Sending email..."
@@ -182,18 +183,36 @@ class EmailThread(threading.Thread):
 			   'attachment; filename="%s"' % os.path.basename(self.attach))
 			self.msg.attach(part)
 
-		mailServer = smtplib.SMTP(self.server, self.port)
-		mailServer.ehlo()
-		mailServer.starttls()
-		mailServer.ehlo()
-		mailServer.login(self.gmail_user, self.gmail_pwd)
-		mailServer.sendmail(self.gmail_user, self.to, self.msg.as_string())
-		# Should be mailServer.quit(), but that crashes...
-		mailServer.close()
-		print "Sending email... Done!"
+		#set mailServer to None
+		mailServer=None
+		
+		try:
+			mailServer = smtplib.SMTP(self.server, self.port)
+			mailServer.ehlo()
+			mailServer.starttls()
+			mailServer.ehlo()
+			mailServer.login(self.gmail_user, self.gmail_pwd)
+			mailServer.sendmail(self.gmail_user, self.to, self.msg.as_string())
+			print "Sending email... Done!"
+			
+		
+		except Exception as e:
+			print "Error: {name} ({msg}).".format(
+			name=e.__class__.__name__, 
+			msg=e)
+			print "Sending email... ABORTED!"
+		
+		finally:
+			if mailServer:
+				# Should be mailServer.quit(), but that crashes...
+				mailServer.close()
+			
+		
+		
+		
 	
-def send_mail_async(to, subject, text, attach, user, pw, server, port):
-    EmailThread(to, subject, text, attach, user, pw, server, port).start()
+def send_mail_async(to, efrom, subject, text, attach, user, pw, server, port):
+    EmailThread(to, efrom, subject, text, attach, user, pw, server, port).start()
 
 #not used
 def sendmailattach(to, subject, text, attach):

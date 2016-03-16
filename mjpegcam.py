@@ -1,7 +1,7 @@
 #  File: mjpegcam.py
 #  Description: HTTP Interface to mjpeg-streamer, screenshots and Timed (TL) screenshots
 #  
-#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  Copyright 2016  Martin Bienz, bienzma@gmail.com
 #  
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -125,8 +125,10 @@ class mjpegCamera(object):
 	def connect(self):
 		if pinger_urllib(self.cmd_ipport):
 			self.connected = True
+			print "Camera connect to "+self.cmd_ipport
 			return True
 		else:
+			print "Error: Camera, could not connect to "+self.cmd_ipport
 			self.connected = False
 			return False
 			

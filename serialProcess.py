@@ -1,7 +1,7 @@
 #  File: serialProcess.py
 #  Description: handles the serial io (communication with the printer) in a seperate thread
 #  
-#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  Copyright 2016  Martin Bienz, bienzma@gmail.com
 #  
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -96,8 +96,11 @@ class SerialProcess_mp(multiprocessing.Process):
 			print "Serial interface on Port "+str(self.port)+" open."
 			self.printer_statusdisplay = str(self.port)+" ready."
 			self.initOK = True
-		except:
+		except Exception as e:
 			print "Serial interface on Port "+str(self.port)+" could not open."
+			print "Error: {name} ({msg}).".format(
+			name=e.__class__.__name__, 
+			msg=e)
 			self.printer_statusdisplay = "Unable to open "+str(self.port)
 			self.initOK = False
 		
