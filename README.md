@@ -1,6 +1,6 @@
-#umcam
+#SDPmote
 Python app that uses an internal webserver (tornado) to serve a client to control / monitor your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs) while printing from SD-Card. It will run on Windows, Linux and on the Raspberry Pi (wheezy, jessie). It also has a pygame interface included that can be used as a touchscreen interface when you have a piTFT (or similar with 320x240 resolution attached). Unlike [octoprint](http://octoprint.org/) it does not stream gcode but  monitors the printer while printing from SD-Card.
-The applications name is derived from Ultimaker ([Great 3D Printer](http://www.ultimaker.com)) **um** and the word camera, **cam**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer and one of the pygame interface.
+The applications name is derived from **SD** - Card, **P**rint and re**mote**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer and one of the pygame interface.
 ![alt umcam_web](/documentation/umcam_web.JPG)
 ![alt umcam_pygame](/documentation/umcam_pygameinterface.png)
 
@@ -71,28 +71,28 @@ cd mjpg-streamer/mjpg-streamer-experimental
 
 If it's up and running you can point your browser to http://```YourPisIP```:8080 and check if it's streaming.
 
-#install umcam
+#install SDPmote
 ```
 cd ~
-git clone https://github.com/MartinBienz/umcam.git
+git clone https://github.com/MartinBienz/SDPmote.git
 ```
 
 ##run (no (touch)screen = no pygame interface):
 ```
-cd umcam
-python umcam.py --headless
+cd SDPmote
+python main.py --headless
 ```
 
 ##run (pitft 2.8 / 320x240, touchscreen):
 ```
-cd umcam
-python umcam.py --fullscreen --hidemouse
+cd SDPmote
+python main.py --fullscreen --hidemouse
 ```
 
 ##run (GPIO enabled (I check fo sudo), no pygame interface)
 ```
-cd umcam
-sudo python umcam.py --headless
+cd SDPmote
+sudo python main.py --headless
 ```
 
 #configuration
