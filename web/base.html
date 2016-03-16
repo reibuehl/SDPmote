@@ -2,7 +2,7 @@
 #  File: base.html
 #  Description: base html with the main, general code file with blocks to be filled by tornado from python, container
 #  
-#  Copyright 2015  Martin Bienz, bienzma@gmail.com
+#  Copyright 2016  Martin Bienz, bienzma@gmail.com
 #  
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 
 	<!-- CSS -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/UltiCam.css" rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
 	
 	<!-- JS -->
 	<script src="js/jquery-1.11.1.min.js"></script>
@@ -113,6 +113,11 @@
 			
 	}
 	
+	function TestMail() {
+		SaveSettings(false);
+		$.getJSON( '/com' , { op: "testmail" } );
+	}
+	
 	function ScreenShot() {
 		
 		if (camisactive) {
@@ -155,7 +160,7 @@
 					
 	};
 	
-	function SaveSettings(){
+	function SaveSettings(closedialog){
 		
 		settings.General.pics_per_second=$("#input_pics_per_second").val();
 
@@ -190,6 +195,7 @@
 		}
 		
 		settings.General.email_to=$("#input_email_to").val();
+		settings.General.email_from=$("#input_email_from").val();
 		settings.General.email_user=$("#input_email_user").val();
 		settings.General.email_pw=$("#input_email_pw").val();
 		settings.General.email_server=$("#input_email_server").val();
@@ -226,7 +232,7 @@
 		 params: params,
          success: function(data) {
                  if (data.status=="ok") {
-					$('#settingsModal').modal('hide');
+					if (closedialog!=false) { $('#settingsModal').modal('hide'); }
 				}
 		   }, 
 		});
@@ -412,6 +418,8 @@
 		
 		GetSettings();
 		
+		$('#btn_testmail').text('send test e-mail');
+		
 		$("#input_mjpg_ip").val(settings.Webserver.mjpg_ip);
 		$("#input_mjpg_port").val(settings.Webserver.mjpg_port);
 		$("#input_mjpg_urlsnapshot").val(settings.Webserver.mjpg_urlsnapshot);
@@ -450,6 +458,7 @@
 		}
 		
 		$("#input_email_to").val(settings.General.email_to);
+		$("#input_email_from").val(settings.General.email_from);
 		$("#input_email_user").val(settings.General.email_user);
 		$("#input_email_pw").val(settings.General.email_pw);
 		$("#input_email_server").val(settings.General.email_server);
@@ -541,6 +550,7 @@
 			<!-- Nav tabs -->
 			<ul class="nav nav-tabs" role="tablist" id="settingstab">
 				<li role="presentation" class="active"><a href="#general" aria-controls="general" role="tab" data-toggle="tab">General</a></li>
+				<li role="presentation"><a href="#notifications" aria-controls="notifications" role="tab" data-toggle="tab">Notifications</a></li>
 				<li role="presentation"><a href="#webserver" aria-controls="webserver" role="tab" data-toggle="tab">Webserver / MJPG</a></li>
 				<li role="presentation"><a href="#serial" aria-controls="serial" role="tab" data-toggle="tab">Serial</a></li>
 				<li role="presentation"><a href="#gcode" aria-controls="gcode" role="tab" data-toggle="tab">Printer / gcode</a></li>
@@ -564,22 +574,41 @@
 						<div class="col-sm-7"><input type="checkbox" class="form-control" id="tl_autostop"></div>
 					  </div>
 					  <div class="form-group">
-						<label for="tl_autostart" class="col-sm-5 control-label">Send email on print complete </label>
-						<div class="col-sm-7">
-						  <input type="checkbox" class="form-control" id="email_on_complete">
-						</div>
-					  </div>
-					  <div class="form-group">
 						<label for="lights_on_onstart" class="col-sm-5 control-label">Lights ON on print start </label>
 						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_on_onstart"></div>
 						<label for="lights_off_oncomplete" class="col-sm-5 control-label">Lights OFF on print complete  </label>
 						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_off_oncomplete"></div>
 					  </div>
+					  
+				  </form>
+								
+				</div>
+				<div role="tabpanel" class="tab-pane" id="notifications">
+					
+					<form class="form-horizontal" role="form">
 					  <div class="form-group">
-						<label for="input_email_to" class="col-sm-5 control-label">Send email to </label>
-						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_to"></div>
-					  </DIV>
+						<label for="email_on_complete" class="col-sm-5 control-label">Send email on print complete </label>
+						<div class="col-sm-7">
+						  <input type="checkbox" class="form-control" id="email_on_complete">
+						</div>
+					  </div>
+					  
 					  <div class="form-group">
+						<label for="input_email_to" class="col-sm-5 control-label">Send email TO </label>
+						<div class="col-sm-7">
+						
+							<div class="input-group">
+							  <input type="text" class="form-control" id="input_email_to">
+							  <span class="input-group-btn">
+								<button id="btn_testmail" class="btn btn-secondary" type="button" onclick="javascript:  TestMail(); $('#btn_testmail').text('e-mail sent!'); ">send test e-mail</button>
+							  </span>
+							</div>
+						</div>
+						
+					  </div>
+					  <div class="form-group">
+						<label for="input_email_from" class="col-sm-5 control-label">email FROM </label>
+						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_from"></div>
 						<label for="input_email_user" class="col-sm-5 control-label">email username (smtp) </label>
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_user"></div>
 						<label for="input_email_pw" class="col-sm-5 control-label">email password (smtp) </label>
@@ -588,11 +617,11 @@
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_server"></div>
 						<label for="input_email_server_port" class="col-sm-5 control-label">email server port (smtp)</label>
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_server_port"></div>
-						
+													
+
 					  </div>
 				  </form>
-					
-					
+								
 				</div>
 				<div role="tabpanel" class="tab-pane" id="webserver">
 					
@@ -709,7 +738,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-		  <a class="navbar-brand" href="/"><img src="/images/um_logo_sm.png" alt="" style="padding-right: 5px; height: 100%;">{{ title }}</a>
+		  <a class="navbar-brand" href="/"><img src="/images/logo_sm.png" alt="" style="padding-right: 5px; height: 100%;">{{ title }}</a>
         </div>
         <div class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
