@@ -2310,7 +2310,7 @@ def checkSerialQResults():
 			#print printerstatus
 			
 			#react to a change if printer starts to heat up for printing
-			if printerstatus["isheatingup"]:
+			if headless == False and printerstatus["isheatingup"]:
 				#if any other dialog is open, close it first
 				if mySimpleDialog.visible and not mySimpleDialog.name == "printstart":
 					mySimpleDialog.toggle()
@@ -2330,12 +2330,13 @@ def checkSerialQResults():
 			if cmd == "PRINTSTART":
 				print "PRINTSTART received"
 				
-				#turn the screensaver back ON
-				ScreenTimer.enabled = True
-				
-				#if the print dialog is still visible, hide it
-				if mySimpleDialog.visible:
-					mySimpleDialog.toggle()
+				if headless == False:
+					#turn the screensaver back ON
+					ScreenTimer.enabled = True
+					
+					#if the print dialog is still visible, hide it
+					if mySimpleDialog.visible:
+						mySimpleDialog.toggle()
 				
 				#turn on the lights if desired
 				if cfg.settings["General"]["lights_on_onstart"] == "True":
