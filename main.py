@@ -2310,7 +2310,7 @@ def checkSerialQResults():
 			#print printerstatus
 			
 			#react to a change if printer starts to heat up for printing
-			if headless == False and printerstatus["isheatingup"]:
+			if if headless == False and printerstatus["isheatingup"]:
 				#if any other dialog is open, close it first
 				if mySimpleDialog.visible and not mySimpleDialog.name == "printstart":
 					mySimpleDialog.toggle()
@@ -2331,7 +2331,7 @@ def checkSerialQResults():
 				print "PRINTSTART received"
 				
 				if headless == False:
-					#turn the screensaver back ON
+				#turn the screensaver back ON
 					ScreenTimer.enabled = True
 					
 					#if the print dialog is still visible, hide it
@@ -2471,7 +2471,7 @@ if __name__ == '__main__':
 								"email_server": "smtp.gmail.com", "email_server_port": "587" },
 					"Webserver": {"mjpg_ip": "192.168.1.15", "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "tornadoport": "8081"},
 					"Serial": {"serial_port": "COM1", "serial_baud": "250000", "web_serial_ln_buffer": "250"},
-					"Printer": {"x_max_mm": "200", "y_max_mm": "200", "z_max_mm": "195", "gcode_lights_on": "M42 P12 S255", "gcode_lights_off": "M42 P12 S0"}}
+					"Printer": {"x_max_mm": "200", "y_max_mm": "200", "z_max_mm": "195", "gcode_lights_on": "M42 S255", "gcode_lights_off": "M42 S0"}}
 					
 	cfg.Load()
 
