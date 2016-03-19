@@ -353,7 +353,7 @@ class CommandHandler(tornado.web.RequestHandler):
 			writetldirs(self)
 		
 		if op == "deltlfiles":
-			filestodel=self.get_arguments('tlfiles',None)
+			filestodel=self.get_arguments('tlfiles')
 			filespathtodel = []
 			for f in filestodel:
 				filespathtodel.append (os.path.join(timelapsedir, self.get_argument('tlfolder',None),f))
