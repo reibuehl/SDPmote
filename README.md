@@ -69,7 +69,15 @@ cd mjpg-streamer/mjpg-streamer-experimental
 ./mjpg_streamer -i "./input_uvc.so" -o "./output_http.so -w ./www"
 ```
 
-If it's up and running you can point your browser to http://```YourPisIP```:8080 and check if it's streaming.
+If it's up and running you can point your browser to http://```YourPisIP```:8080 and check if it's streaming. If it does, install mjpg-streamer  with this command:
+```
+make install
+```
+This will install mjpg_streamer in /usr/local/bin. Now copy the provided mjpg-streamer.service to /etc/systemd/system/mjpg-streamer.service and activate the systemd startup script with the following commands:
+```
+sudo systemctl enable mjpg-streamer
+```
+After a reboot, mjpeg_streamer should be started automatically.
 
 #install SDPmote
 ```
