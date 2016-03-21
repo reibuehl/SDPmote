@@ -228,8 +228,9 @@ class SerialProcess_mp(multiprocessing.Process):
 	
 	def toggle_stopprint(self, msg):
 		self.printer_statusdisplay =  msg
-		self.printer_isprinting=False
-		self.resultQ.put({"CMD": "COMMAND", "DO": "PRINTSTOP"})
+		if self.printer_isprinting:
+			self.printer_isprinting=False
+			self.resultQ.put({"CMD": "COMMAND", "DO": "PRINTSTOP"})
 	
 	def toggle_startprint(self, msg):
 		self.printer_statusdisplay = msg
@@ -343,11 +344,12 @@ class SerialProcess_mp(multiprocessing.Process):
 				bytesprintedpercentage=float(match.group(1)) / float(match.group(2)) * 100
 				#print "SD Printing Progress: {0:.2f}% (Bytes {1:} / {2:})".format(bytesprintedpercentage, match.group(1), match.group(2))
 				self.printer_progress = (round(bytesprintedpercentage,2), int(match.group(1)) ,int(match.group(2)))
-				self.printer_isprinting=True
 				
 				# is at 100% so printing is done
 				if bytesprintedpercentage == 100:
 					self.toggle_stopprint("Print finished")
+				else:
+					self.printer_isprinting=True
 				
 			else:
 				#print "SD Printing Progress: NOT Printing"
