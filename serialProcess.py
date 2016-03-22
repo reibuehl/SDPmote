@@ -408,5 +408,4 @@ class SerialProcess_mp(multiprocessing.Process):
 					self.resultQ.put({"CMD": "STATUS", "DATA": self.GetPrinterStatus()})
 					
 				# send it back to tornado
-				self.resultQ.put({"CMD": "SERIAL", "DATA": result})	
-							
+				self.resultQ.put({"CMD": "SERIAL", "DATA": result})							

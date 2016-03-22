@@ -48,6 +48,7 @@ if not os.path.dirname(__file__) == "":
 	#sys.exit()
 
 import time
+import signal
 import datetime
 import math
 import platform
@@ -64,6 +65,7 @@ import multiprocessing 	#for the Q / Serial
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+import tornado.httpserver
 import uuid
 import json
 
@@ -294,15 +296,8 @@ class CommandHandler(tornado.web.RequestHandler):
 		
 				
 		if op == "restartserver":
-			if self.get_argument('mode',None) == "app":
-				RestartApplication()
-			
-			if self.get_argument('mode',None) == "server":
-				RestartServer()
-			
-			if self.get_argument('mode',None) == "shutdown":
-				ShutdownServer()
-			
+			EndMe(self.get_argument('mode',None))
+		
 		
 		if op == "getsettings":
 			
@@ -1959,7 +1954,7 @@ def PyInterfaceMainLoop():
 		
 		#EXIT Event
 		if event.type == QUIT:	
-			EndMe(True)
+			EndMe("")
 		
 		if event.type == MOUSELONGPRESS:
 			print "Mouse Longpress Event, Key: "+str(event.mousebutton)
@@ -1984,18 +1979,11 @@ def PyInterfaceMainLoop():
 		#Standard KEYS	Events
 		if event.type == pygame.KEYDOWN:
 			
-			if event.key == pygame.K_q:
-				PrintIsStartingDialog()
-				#resultQ.put({"CMD": "COMMAND", "DO": "PRINTSTART"})
-
-			if event.key == pygame.K_w:
-				resultQ.put({"CMD": "COMMAND", "DO": "PRINTSTOP"})
-			
 			if event.key == pygame.K_x:
-				EndMe(True)
+				EndMe("")
 			
 			if event.key == pygame.K_ESCAPE:
-				EndMe(True)
+				EndMe("")
 				
 			if event.key == pygame.K_i:
 				mynotism.triggershow(2, " FPS: " + str(int(clock.get_fps())))
@@ -2104,29 +2092,81 @@ def TakePicture():
 		if headless == False: 
 			mynotism.triggershow(1, "Camera NOT connected, can't take picture.")
 				
-def EndMe(exit):
+def EndMe(cmd):
 	
+	print "EXIT command received ["+cmd+"], going down!"
+	
+	#close screentimer and mjpgCam...
 	if headless == False: ScreenTimer.reset()
 	if mjpgCam.is_running: mjpgCam.stop()
 	
+	#Stop all Tornado callbacks first...
+	print "TORNADO: Stopping callbacks..."
 	if headless == False:
 		periodic.stop()
 	serialscheduler.stop()
+		
+	#close Tornado properly and THEN do whatever required (restart etc.)
+	ShutdownTornado(cmd)
+
+def LastActions(cmd):
+	#this is called after tornado is properly closed down...
 	
-	tornado_main_loop.stop()
-	
+	#close pygame
+	print "PYGAME: Stopping..."
+	pygame.quit()
+
+	#close the serial interface
+	print "SERIAL: Closing..."
 	sp.close()
+	
+	print "GPIO: Closing..."
+	#close the gpio interface
 	try:
 		gpioP.close()
 	except NameError:
 		pass
 	
-	pygame.quit()
+	if cmd == "appexit":
+		pass
 	
-	if exit == True:
-		print "All closed...Bye Bye!"
-		sys.exit()
-
+	if cmd == "app":
+		print "Restarting application..."
+		os.execl(sys.executable, *([sys.executable]+sys.argv))
+	
+	if cmd == "server":
+		print "Restarting server..."
+		os.system("sudo reboot")
+	
+	if cmd == "shutdown":
+		print "Shuting down..."
+		os.system("sudo shutdown -h now")
+	
+	print mytitle+": ALL DONE, see you next time!"
+	sys.exit()
+		
+def ShutdownTornado(cmd):
+	print "TORNADO: Stopping HTTP Server..."
+	httpserver.stop()
+	
+	_SHUTDOWN_TIMEOUT = 1
+	deadline = time.time() + _SHUTDOWN_TIMEOUT
+	
+	#wait for all to close then exit...		
+	def terminate():
+		now = time.time()
+		if now < deadline and (tornado_main_loop._callbacks or tornado_main_loop._timeouts):
+			#print "Trying to exit tornado..."
+			tornado_main_loop.add_timeout(now+1, terminate)
+		else:
+			print "TORNADO: Stopping ..."
+			tornado_main_loop.stop()
+			
+			#Anything else to be done?
+			LastActions(cmd)
+			
+	terminate()
+		
 def CreatePrintIsStartingSurface(surf):
 	fnt=pygame.font.Font(None, generalfontsize+5)
 	fnt_big=pygame.font.Font(None, generalfontsize+10)
@@ -2228,8 +2268,8 @@ def PowerOptionsDialog():
 	mySimpleDialog.set_text("What would you like to do? If you shut your raspberry pi down you will need to also unplug the usb power adapter. Restarting will bring you back into the application.")
 	
 	mySimpleDialog.add_button(None, "Cancel", "mySimpleDialog.toggle();" ,(60,40), 10)
-	mySimpleDialog.add_button(os.path.join(resourcesdir, "icon_shutdown-50.png"), "Shutdown", "ShutdownServer(); mySimpleDialog.toggle(); mainmenuscreen.toggle()" , (110,40), 85, col=button_red, col_over=button_red_on)
-	mySimpleDialog.add_button(os.path.join(resourcesdir, "icon_restart-50.png"), "Restart", "RestartServer(); mySimpleDialog.toggle(); mainmenuscreen.toggle()", (110,40), 200, col=button_green, col_over=button_green_on)
+	mySimpleDialog.add_button(os.path.join(resourcesdir, "icon_shutdown-50.png"), "Shutdown", "EndMe('shutdown'); mySimpleDialog.toggle(); mainmenuscreen.toggle()" , (110,40), 85, col=button_red, col_over=button_red_on)
+	mySimpleDialog.add_button(os.path.join(resourcesdir, "icon_restart-50.png"), "Restart", "EndMe('server'); mySimpleDialog.toggle(); mainmenuscreen.toggle()", (110,40), 200, col=button_green, col_over=button_green_on)
 	
 	#mySimpleDialog.set_button_text(0, "Go away!")
 	#mySimpleDialog.set_button_text(1, "HA!")
@@ -2241,12 +2281,6 @@ def PowerOptionsDialog():
 	#mySimpleDialog.remove_all_buttons()
 	
 	mySimpleDialog.visible = True
-
-def RestartServer():
-	print "Restarting Server"
-	EndMe(False)
-	os.system("sudo reboot")
-	sys.exit
 
 def CleanArg(arg, default):
 	temp=str(arg)[2:-2]
@@ -2287,17 +2321,6 @@ def SendGcodeSpecial(args):
 def SendGodeLog(cmd):
 	taskQ.put({"CMD": "SERIAL", "DATA": cmd})
 	updateSerialLog("sent: "+cmd)
-	
-def ShutdownServer():
-	print "Shuting down"
-	EndMe(False)
-	os.system("sudo shutdown -h now")
-	sys.exit
-		
-def RestartApplication():
-	print "Restarting Application"
-	EndMe(False)
-	os.execl(sys.executable, *([sys.executable]+sys.argv))
 	
 def checkSerialQResults():
 	global printerstatus
@@ -2530,13 +2553,18 @@ if __name__ == '__main__':
 	(r"/(.*\.*)", tornado.web.StaticFileHandler,{"path": cwd }),
 	], debug=TornadoDebug, template_path=cwd, queue=taskQ)
 	
+	httpserver = tornado.httpserver.HTTPServer(application)
+		
 	if not platform.system() == "Windows":
-		application.listen(cfg.settings["Webserver"]["tornadoport"], '0.0.0.0')
+		#application.listen(cfg.settings["Webserver"]["tornadoport"], '0.0.0.0')
+		httpserver.listen(cfg.settings["Webserver"]["tornadoport"], '0.0.0.0')
 	else:
-		application.listen(cfg.settings["Webserver"]["tornadoport"])
+		#application.listen(cfg.settings["Webserver"]["tornadoport"])
+		httpserver.listen(cfg.settings["Webserver"]["tornadoport"])
 	
 	#application.listen(tornadoport)
 	tornado_main_loop = tornado.ioloop.IOLoop.instance()
+	
 	if headless == False:
 		periodic = tornado.ioloop.PeriodicCallback(PyInterfaceMainLoop, 10, io_loop = tornado_main_loop)
 		periodic.start()
@@ -2553,7 +2581,9 @@ if __name__ == '__main__':
 			mjpgCam.BlitPygameSurface(background)
 			background.blit(my_logo,(185,200))
 	
+
+	
 	try:
 		tornado_main_loop.start()
 	except KeyboardInterrupt:
-		EndMe(True)
+		EndMe("")
