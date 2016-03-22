@@ -74,12 +74,17 @@
                     '<div class="form-group"> ' +
                     '<label class="col-md-4 control-label" for="whattorestart">I would like to:</label> ' +
                     '<div class="col-md-4"> <div class="radio"> <label for="whattorestart-0"> ' +
-                    '<input type="radio" name="whattorestart" id="whattorestart-0" value="app" checked="checked"> ' +
-                    'restart the <b>Application</b> </label> ' +
-                    '</div><div class="radio"> <label for="whattorestart-1"> ' +
-                    '<input type="radio" name="whattorestart" id="whattorestart-1" value="server"> <b>restart</b> the <b>system</b> </label> ' +
-					'</div><div class="radio"> <label for="whattorestart-2"> ' +
-                    '<input type="radio" name="whattorestart" id="whattorestart-2" value="shutdown"> <b>shutdown</b> the <b>system</b> </label> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-0" value="appexit" checked="checked"> ' +
+                    '<b>Exit</b> the <b>Application</b> </label> ' +
+                    '</div> ' +
+					'<div class="radio"> <label for="whattorestart-1"> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-1" value="app"> ' +
+                    '<b>restart</b> the <b>Application</b> </label> ' +
+                    '</div> ' +
+					'<div class="radio"> <label for="whattorestart-2"> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-2" value="server"> <b>restart</b> the <b>system</b> </label> ' +
+					'</div><div class="radio"> <label for="whattorestart-3"> ' +
+                    '<input type="radio" name="whattorestart" id="whattorestart-3" value="shutdown"> <b>shutdown</b> the <b>system</b> </label> ' +
                     '</div> ' +
                     '</div> </div>' +
                     '</form> </div>  </div>',
@@ -100,6 +105,8 @@
 								$.getJSON( '/com' , { op: "restartserver", mode : "app" } );
 							} else if (what=='server') {
 								$.getJSON( '/com' , { op: "restartserver", mode : "server" } );
+							} else if (what=='appexit') {
+								$.getJSON( '/com' , { op: "restartserver", mode : "appexit" } );
 							} else if (what=='shutdown') {
 								$.getJSON( '/com' , { op: "restartserver", mode : "shutdown" } );
 							}
