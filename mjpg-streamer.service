@@ -1,0 +1,11 @@
+[Unit]
+Description=mjpg-streamer for SDPmote 
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/mjpg_streamer -i "input_raspicam.so -fps 30 -x 1024 -y 768 -quality 90" -o "output_http.so -w /usr/local/share/mjpg-streamer/www"
+
