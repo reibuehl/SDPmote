@@ -2091,7 +2091,11 @@ def TakePicture():
 	else:
 		if headless == False: 
 			mynotism.triggershow(1, "Camera NOT connected, can't take picture.")
-				
+
+def signal_handler(signal, frame):
+    print "You pressed Ctrl+C!"
+    EndMe("")
+			
 def EndMe(cmd):
 	
 	print "EXIT command received ["+cmd+"], going down!"
@@ -2451,6 +2455,7 @@ def updateSerialLog(data):
 def MyExtruderTimer():
 	print "text"
 
+	
 #Main Program with Main LOOP for Tornado, periodic for serial and if interface enabled periodic for pygame		
 if __name__ == '__main__':
 		
@@ -2581,9 +2586,8 @@ if __name__ == '__main__':
 			mjpgCam.BlitPygameSurface(background)
 			background.blit(my_logo,(185,200))
 	
-
+	#signal handler if ctrl+c is pressed
+	signal.signal(signal.SIGINT, signal_handler)
 	
-	try:
-		tornado_main_loop.start()
-	except KeyboardInterrupt:
-		EndMe("")
+	#starting the main tornado loop
+	tornado_main_loop.start()
