@@ -393,7 +393,7 @@ class SerialProcess_mp(multiprocessing.Process):
 				task = self.taskQ.get()
 				# send it to the arduino
 				if task["CMD"] == "SERIAL":
-					print "sent: " + task["DATA"]
+					print time.strftime("%H:%M:%S")+" sent: " + task["DATA"]
 					self.sp.write(str(task["DATA"])+ '\n')
 					
 				if task["CMD"] == "STARTMANUAL":

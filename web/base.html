@@ -171,35 +171,13 @@
 		
 		settings.General.pics_per_second=$("#input_pics_per_second").val();
 
-		if ($("#tl_autostart").is(':checked')) {
-			settings.General.tl_autostart="True";
-		} else {
-			settings.General.tl_autostart="False";
-		}
-		
-		if ($("#tl_autostop").is(':checked')) {
-			settings.General.tl_autostop="True";
-		} else {
-			settings.General.tl_autostop="False";
-		}
-		
-		if ($("#email_on_complete").is(':checked')) {
-			settings.General.email_on_complete="True";
-		} else {
-			settings.General.email_on_complete="False";
-		}
-		
-		if ($("#lights_off_oncomplete").is(':checked')) {
-			settings.General.lights_off_oncomplete="True";
-		} else {
-			settings.General.lights_off_oncomplete="False";
-		}
-		
-		if ($("#lights_on_onstart").is(':checked')) {
-			settings.General.lights_on_onstart="True";
-		} else {
-			settings.General.lights_on_onstart="False";
-		}
+		if ($("#tl_autostart").is(':checked')) { settings.General.tl_autostart="True";} else {settings.General.tl_autostart="False";}
+		if ($("#tl_autostop").is(':checked')) {	settings.General.tl_autostop="True";} else {settings.General.tl_autostop="False";}
+		if ($("#email_on_complete").is(':checked')) {settings.General.email_on_complete="True";} else {settings.General.email_on_complete="False";}
+		if ($("#lights_off_oncomplete").is(':checked')) {settings.General.lights_off_oncomplete="True";} else {settings.General.lights_off_oncomplete="False";}
+		if ($("#lights_on_onstart").is(':checked')) {settings.General.lights_on_onstart="True";} else {settings.General.lights_on_onstart="False";}
+		if ($("#mjpg_autostart").is(':checked')) {settings.Webserver.mjpg_autostart="True";} else {settings.Webserver.mjpg_autostart="False";}
+		if ($("#mjpg_autostop").is(':checked')) {settings.Webserver.mjpg_autostop="True";} else {settings.Webserver.mjpg_autostop="False";}
 		
 		settings.General.email_to=$("#input_email_to").val();
 		settings.General.email_from=$("#input_email_from").val();
@@ -213,7 +191,10 @@
 		settings.Webserver.mjpg_urlsnapshot=$("#input_mjpg_urlsnapshot").val();
 		settings.Webserver.mjpg_urlstream=$("#input_mjpg_urlstream").val();
 		settings.Webserver.tornadoport=$("#input_tornadoport").val();
-			
+		settings.Webserver.mjpg_start_cmd=$("#input_mjpg_start_cmd").val();
+		settings.Webserver.mjpg_stop_cmd=$("#input_mjpg_stop_cmd").val();
+		settings.Webserver.mjpg_start_delay=$("#input_mjpg_start_delay").val();
+		
 		settings.Serial.serial_port=$("#input_serial_port").val();
 		settings.Serial.serial_baud=$("#input_serial_baud").val();
 		settings.Serial.web_serial_ln_buffer=$("#input_serial_web_serial_ln_buffer").val();
@@ -433,36 +414,20 @@
 		$("#input_mjpg_urlstream").val(settings.Webserver.mjpg_urlstream);
 		$("#input_tornadoport").val(settings.Webserver.tornadoport);
 		
+		$("#input_mjpg_start_cmd").val(settings.Webserver.mjpg_start_cmd);
+		$("#input_mjpg_stop_cmd").val(settings.Webserver.mjpg_stop_cmd);
+		$("#input_mjpg_start_delay").val(settings.Webserver.mjpg_start_delay);
+		
 		$("#input_pics_per_second").val(settings.General.pics_per_second);
 		
+		if (settings.Webserver.mjpg_autostart == "True") {$("#mjpg_autostart").attr('checked', true);} else {$("#mjpg_autostart").attr('checked', false);}
+		if (settings.Webserver.mjpg_autostop == "True") {$("#mjpg_autostop").attr('checked', true);} else {$("#mjpg_autostop").attr('checked', false);}
 		
-		if (settings.General.tl_autostart == "True") {
-			$("#tl_autostart").attr('checked', true);
-		} else {
-			$("#tl_autostart").attr('checked', false);
-		}
-		if (settings.General.tl_autostop == "True") {
-			$("#tl_autostop").attr('checked', true);
-		} else {
-			$("#tl_autostop").attr('checked', false);
-		}
-		if (settings.General.email_on_complete == "True") {
-			$("#email_on_complete").attr('checked', true);
-		} else {
-			$("#email_on_complete").attr('checked', false);
-		}
-		
-		if (settings.General.lights_off_oncomplete == "True") {
-			$("#lights_off_oncomplete").attr('checked', true);
-		} else {
-			$("#lights_off_oncomplete").attr('checked', false);
-		}
-		
-		if (settings.General.lights_on_onstart == "True") {
-			$("#lights_on_onstart").attr('checked', true);
-		} else {
-			$("#lights_on_onstart").attr('checked', false);
-		}
+		if (settings.General.tl_autostart == "True") {$("#tl_autostart").attr('checked', true);} else {$("#tl_autostart").attr('checked', false);}
+		if (settings.General.tl_autostop == "True") {$("#tl_autostop").attr('checked', true);} else {$("#tl_autostop").attr('checked', false);}
+		if (settings.General.email_on_complete == "True") {$("#email_on_complete").attr('checked', true);} else {$("#email_on_complete").attr('checked', false);}
+		if (settings.General.lights_off_oncomplete == "True") {$("#lights_off_oncomplete").attr('checked', true);} else {$("#lights_off_oncomplete").attr('checked', false);}
+		if (settings.General.lights_on_onstart == "True") {$("#lights_on_onstart").attr('checked', true);} else {$("#lights_on_onstart").attr('checked', false);}
 		
 		$("#input_email_to").val(settings.General.email_to);
 		$("#input_email_from").val(settings.General.email_from);
@@ -639,26 +604,49 @@
 						  <input type="number" class="form-control" id="input_tornadoport">
 						</div>
 					  </div>
+					  
 					  <div class="form-group">
-						<label for="input_mjpg_ip" class="col-sm-5 control-label">MJPG IP Adress</label>
+						
+						<label for="input_mjpg_start_cmd" class="col-sm-5 control-label">mjpg start command</label>
+						<div class="col-sm-7">
+						  <input type="text" class="form-control" id="input_mjpg_start_cmd">
+						</div>
+						<label for="input_mjpg_stop_cmd" class="col-sm-5 control-label">mjpg stop command</label>
+						<div class="col-sm-7">
+						  <input type="text" class="form-control" id="input_mjpg_stop_cmd">
+						</div>
+						
+						<label for="mjpg_autostart" class="col-sm-5 control-label">mjpg autostart </label>
+						<div class="col-sm-7">
+						  <input type="checkbox" class="form-control" id="mjpg_autostart">
+						</div>
+						<label for="mjpg_autostop" class="col-sm-5 control-label">mjpg autostop </label>
+						<div class="col-sm-7">
+						  <input type="checkbox" class="form-control" id="mjpg_autostop">
+						</div>
+						
+						<label for="input_mjpg_start_delay" class="col-sm-5 control-label">startup delay (s)</label>
+						<div class="col-sm-7">
+						  <input type="number" class="form-control" id="input_mjpg_start_delay">
+						</div>
+							  
+					  </div>					  
+					  
+					  
+					  <div class="form-group">
+						<label for="input_mjpg_ip" class="col-sm-5 control-label">mjpg ip adress</label>
 						<div class="col-sm-7">
 						  <input type="text" class="form-control" id="input_mjpg_ip">
 						</div>
-					  </div>
-					  <div class="form-group">
-						<label for="input_mjpg_port" class="col-sm-5 control-label">MJPG IP Port</label>
+						<label for="input_mjpg_port" class="col-sm-5 control-label">mjpg ip Port</label>
 						<div class="col-sm-7">
 						  <input type="number" class="form-control" id="input_mjpg_port">
 						</div>
-					  </div>
-					  <div class="form-group">
-						<label for="input_mjpg_urlsnapshot" class="col-sm-5 control-label">MJPG Snapshot Command</label>
+					  	<label for="input_mjpg_urlsnapshot" class="col-sm-5 control-label">mjpg snapshot command</label>
 						<div class="col-sm-7">
 						  <input type="text" class="form-control" id="input_mjpg_urlsnapshot">
 						</div>
-					  </div>
-					  <div class="form-group">
-						<label for="input_mjpg_urlstream" class="col-sm-5 control-label">MJPG Stream Command</label>
+					  	<label for="input_mjpg_urlstream" class="col-sm-5 control-label">mjpg Stream command</label>
 						<div class="col-sm-7">
 						  <input type="text" class="form-control" id="input_mjpg_urlstream">
 						</div>

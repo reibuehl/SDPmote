@@ -21,7 +21,7 @@
 #
 
 #application name
-mytitle="SDPmote v0.2"
+mytitle="SDPremote V0.2"
 print "------------------------------------------------------------------"
 print mytitle+" Copyright (C) 2016 Martin Bienz, bienzma@gmail.com"
 print "This program comes with ABSOLUTELY NO WARRANTY."
@@ -234,13 +234,14 @@ def writetldirs(handler):
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 	
 	def open(self, *args):
-		#self.id = self.get_argument("Id")
 		self.id = uuid.uuid4()
 		self.stream.set_nodelay(True)
+		#Store the client
 		websocketclients[self.id] = {"id": self.id, "object": self}
+		#Send wellcome msg
 		self.write_message("You are connected with id " + str(self.id))
-		self.write_message({"cmd": "TEMP", "data": (25.0,30.1)})
-
+		#websocketclients[self.id]["object"].write_message({"cmd": "TIME", "data": (time.time(),30.1)})
+		
 	def on_message(self, message):        
 		"""
 		when we receive some message we want some message handler..
@@ -754,8 +755,8 @@ class RenderStatusBar:
 		
 		self.notiscreen = pygame.Surface((320, 40),SRCALPHA)
 		self.notiscreen.fill((110, 110, 110, 240) ,special_flags=BLEND_RGBA_MAX)
-		#Blit the UM Logo
-		self.notiscreen.blit(my_logo,(185,0))
+		#Blit the Logo
+		self.notiscreen.blit(my_logo,(195,0))
 	
 		self.left=0
 		self.width=self.notiscreen.get_width()
@@ -1829,8 +1830,8 @@ def initPyGame():
 	#render UM Logo on top of BG (bottom, right)
 	my_logo = pygame.image.load(os.path.join(resourcesdir, "logo_ori.png")).convert_alpha()
 	my_logo.fill((buttonbordercolor.r, buttonbordercolor.g, buttonbordercolor.b , 0), special_flags = BLEND_RGBA_MAX) #blend logo to dark grey
-	my_logo.fill((215, 215, 215 , 0), special_flags = BLEND_RGBA_MAX) #blend logo to white
-	background.blit(my_logo,(185,200))
+	#my_logo.fill((215, 215, 215 , 0), special_flags = BLEND_RGBA_MAX) #blend logo to white
+	background.blit(my_logo,(195,200))
 		
 	initUpdateStatus("icon_menu-50.png", "Creating Menu structure...")
 	
@@ -2116,6 +2117,10 @@ def EndMe(cmd):
 def LastActions(cmd):
 	#this is called after tornado is properly closed down...
 	
+	#close the mjpg streamer
+	if cfg.settings["Webserver"]["mjpg_autostop"] == "True":
+		mjpg_cmd("stop")
+	
 	#close pygame
 	print "PYGAME: Stopping..."
 	pygame.quit()
@@ -2170,7 +2175,23 @@ def ShutdownTornado(cmd):
 			LastActions(cmd)
 			
 	terminate()
-		
+
+def mjpg_cmd(cmd):
+	
+	if systemuser["sudo"]:
+		cmd_prefix="sudo -u "+systemuser["username"]+" "
+	else:
+		cmd_prefix=""
+	
+	if cmd == "start":
+		print "MJPG: Starting with " + cmd_prefix+cfg.settings["Webserver"]["mjpg_start_cmd"] + "..."
+		os.system(cmd_prefix+cfg.settings["Webserver"]["mjpg_start_cmd"])
+		time.sleep(int(cfg.settings["Webserver"]["mjpg_start_delay"]))
+	
+	if cmd == "stop":
+		print "MJPG: Stopping with " + cmd_prefix+cfg.settings["Webserver"]["mjpg_stop_cmd"] + "..."
+		os.system(cmd_prefix+cfg.settings["Webserver"]["mjpg_stop_cmd"])
+	
 def CreatePrintIsStartingSurface(surf):
 	fnt=pygame.font.Font(None, generalfontsize+5)
 	fnt_big=pygame.font.Font(None, generalfontsize+10)
@@ -2324,7 +2345,7 @@ def SendGcodeSpecial(args):
 
 def SendGodeLog(cmd):
 	taskQ.put({"CMD": "SERIAL", "DATA": cmd})
-	updateSerialLog("sent: "+cmd)
+	updateSerialLog(time.strftime("%H:%M:%S")+" sent: "+cmd)
 	
 def checkSerialQResults():
 	global printerstatus
@@ -2439,8 +2460,8 @@ def checkSerialQResults():
 				
 		#SERIAL handler for the serial log interface...
 		if result["CMD"] == "SERIAL":
-			updateSerialLog("rec: " + result["DATA"])
-			print "rec: " + result["DATA"]
+			updateSerialLog(time.strftime("%H:%M:%S")+" rec: " + result["DATA"])
+			print time.strftime("%H:%M:%S")+" rec: " + result["DATA"]
 			
 		#GPIO Result handler
 		if result["CMD"] == "GPIO":
@@ -2497,13 +2518,21 @@ if __name__ == '__main__':
 	cfg.defaults = {"General": {"pics_per_second": "5", "tl_autostart": "False", "tl_autostop": "False",
 								"email_on_complete": "False","lights_on_onstart": "False", "lights_off_oncomplete": "False", "email_to": "test@send.com", "email_from": "from@gmail.com", "email_user": "test@gmail.com", "email_pw": "***", 
 								"email_server": "smtp.gmail.com", "email_server_port": "587" },
-					"Webserver": {"mjpg_ip": "192.168.1.15", "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "tornadoport": "8081"},
+					"Webserver": {"mjpg_start_delay":"2", "mjpg_autostart":"False", "mjpg_autostop":"False", "mjpg_start_cmd": "./raspi_stream start","mjpg_stop_cmd": "./raspi_stream stop", "mjpg_ip": "192.168.1.15", "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "tornadoport": "8081"},
 					"Serial": {"serial_port": "COM1", "serial_baud": "250000", "web_serial_ln_buffer": "250"},
 					"Printer": {"x_max_mm": "200", "y_max_mm": "200", "z_max_mm": "195", "gcode_lights_on": "M42 S255", "gcode_lights_off": "M42 S0"}}
 					
 	cfg.Load()
 
 	#cfg.settings["General"]["pics_per_second"]
+	
+	#starting mjpg streamer deamon / script if so desired
+	
+	if cfg.settings["Webserver"]["mjpg_autostart"] == "True":
+		if headless == False:
+			initUpdateStatus("icon_camera-50.png", "Starting mjpg with " + cfg.settings["Webserver"]["mjpg_start_cmd"] + "...")
+		mjpg_cmd("start")
+	
 	
 	if headless == False:
 		initUpdateStatus("icon_camera-50.png", "Connecting camera " + cfg.settings["Webserver"]["mjpg_ip"] + ":" + cfg.settings["Webserver"]["mjpg_port"] +"...")
