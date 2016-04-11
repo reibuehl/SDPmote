@@ -304,18 +304,30 @@ class SerialProcess_mp(multiprocessing.Process):
 		if 'ok T' in line:
 			news=True
 			#answering M105 with ok to get Temp readings "ok T:21.5 /0.0 B:18.7 /0.0 T0:21.5 /0.0 @:0 B@:0"
-
+			#	 "ok T:24.0 /0.0 B:20.6 /0.0 @:0 B@:0" !!!!UM2!!!!!
+			
+			#line = "ok T:24.0 /0.0 B:20.6 /0.0 @:0 B@:0"
+			
 			maxToolNum, parsedTemps =  self.parseTemp(line)
 			
 			# bed temperature
 			if "B" in parsedTemps.keys():
 				toolNum, actual_bed, target_bed = parsedTemps["B"]
 				#print "Bed temperature: {0:} target: {1:}".format(actual_bed, target_bed)
+			else:
+				#no bed?
+				actual_bed, target_bed = (0.0, 0.0)
 			
-			#nozzle
+			#nozzle T0 and T
 			if "T0" in parsedTemps.keys():
 				toolNum, actual_ext, target_ext = parsedTemps["T0"]
 				#print "Nozzle temperature: {0:} target: {1:}".format(actual_ext, target_ext)
+			else:		
+				if "T" in parsedTemps.keys():
+					toolNum, actual_ext, target_ext = parsedTemps["T"]
+					#print "Nozzle temperature: {0:} target: {1:}".format(actual_ext, target_ext)
+				else:
+					actual_ext, target_ext = (0.0, 0.0)
 			
 			try:		
 				self.printer_temp = (round(float(actual_ext),2),round(float(target_ext),2),round(float(actual_bed),2), round(float(target_bed),2))	
