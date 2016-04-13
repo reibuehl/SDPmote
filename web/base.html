@@ -33,6 +33,9 @@
 
 	<!-- CSS -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
+	<!--<link href="css/select2.min.css" rel="stylesheet">
+	<link href="css/select2-bootstrap.min.css" rel="stylesheet">-->
+	<link href="css/bootstrap-select.min.css" rel="stylesheet">
     <link href="css/main.css" rel="stylesheet">
 	
 	<!-- JS -->
@@ -40,6 +43,8 @@
     <script src="js/bootstrap.min.js"></script>
 	<script src="js/bootstrap-switch.js"></script>
 	<script src="js/bootbox.min.js"></script>
+	<!--<script src="js/select2.min.js"></script>-->
+	<script src="js/bootstrap-select.min.js"></script>
 	<script src="js/crosshair.js"></script>
 	
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
@@ -51,8 +56,12 @@
 	var global_tlon=false;
 	var global_tlon_folder="";
 	
+	var streamswitch=false;
+	var streamto_save="";
+	
 
 	var settings;
+	var serialon=false;
 	
 	var save_sdrefresh;
 	
@@ -120,10 +129,108 @@
 			
 	}
 	
-	function TestMail() {
+	function TestMail(that) {
+		$(that).text('sending...');
 		SaveSettings(false);
-		$.getJSON( '/com' , { op: "testmail" } );
+			
+		params = { op: "testmail" };
+		
+		$.getJSON( '/com' , params, function(data) {
+					bootbox.alert("The command returned with: "+data.status + ", you will receive another Message once the mail is sent.", function() {
+						$(that).text('send test e-mail');
+					});
+			
+		  	
+				});
+		
 	}
+	
+	function startstopserial() {
+		// var = serialon
+		
+		if (serialon) { cmd="stop"; serialstatus="connected"; } else { cmd="start"; serialstatus="disconnected"; }
+		
+		$('#btn_serial_toggle').text("Working...");
+		$('#btn_serial_toggle').prop('disabled', true);
+		SaveSettings(false);
+		
+		params = { op: "startstopserial", cmd: cmd};
+		
+		$.getJSON( '/com' , params, function(data) {
+					bootbox.alert("SERIAL: Serial interface status changed to <strong>"+data.info+"</strong>!", function() {
+						//$('#btn_serial_toggle').text("start");
+						$('#btn_serial_toggle').prop('disabled', false);
+					});
+	  	
+				});
+			
+		
+		
+
+	}
+	
+	function startstopmjpg( that, cmd ) {
+		
+		
+		if (global_tlon==true) {
+				
+				bootbox.confirm({
+					title: 'WARNING: Timelapse is running!',
+					message: 'Are you sure you want <strong>'+cmd+'</strong> MJPEG-streamer? Confirming will stop the timelapse!',
+					buttons: {
+						'cancel': {
+							label: 'Cancel',
+							className: 'btn-default'
+						},
+						'confirm': {
+							label: 'Confirm',
+							className: 'btn-danger'
+						}
+					},
+					callback: function(result) {
+						if (result) {
+							//Okay, stopping TL
+							ToggleTL();
+							SaveSettings(false);
+							params = { op: "startstopmjpg", cmd: cmd};
+					
+							$(that).text('running...'); 
+					
+							$.getJSON( '/com' , params, function(data) {
+								bootbox.alert("Timelapse stopped. The command returned with: "+data.info, function() {
+									$(that).text('run');
+
+								});
+						
+						
+							});
+							
+							
+						}
+					}
+				});
+				
+			}
+			else
+			{
+				SaveSettings(false);
+				params = { op: "startstopmjpg", cmd: cmd};
+		
+				$(that).text('running...'); 
+		
+				$.getJSON( '/com' , params, function(data) {
+					bootbox.alert("The command returned with: "+data.info, function() {
+						$(that).text('run');
+						if (typeof setCam !== 'undefined' && $.isFunction(setCam)) { setCam(); }
+					});
+			
+		  	
+				});
+			}
+					
+		
+	}
+	
 	
 	function ScreenShot() {
 		
@@ -231,12 +338,21 @@
 	
 	myDialogs = myDialogs || (function () {
 	
-	var pleaseWaitDiv = $('<div class="modal fade" id="pleaseWaitDialog" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress"><div id="progress_download" class="progress-bar progress-bar-striped active"  role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"><span class="sr-only">100% Complete</span></div></div></div></div></div></div>');
+	var pleaseWaitDiv = $('<span>placeholder</span>');
+	
     return {
-			showPleaseWait: function() {
+			showPleaseWait: function(title, content, canclosekeyb) {
+				
+				if (typeof canclosekeyb != 'undefined') { canclosekeyb = canclosekeyb; } else { canclosekeyb = false; }
+				if (typeof title != 'undefined') { str_title = title ; } else { str_title = "Processing..."}
+				if (typeof content != 'undefined') { str_content = content; } else {
+					str_content='<div class="progress"><div id="progress_download" class="progress-bar progress-bar-striped active"  role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"><span class="sr-only">100% Complete</span></div></div>'
+				}
+				pleaseWaitDiv = $('<div class="modal fade" id="pleaseWaitDialog" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title">'+str_title+'</h4></div><div class="modal-body">'+str_content+'</div></div></div></div>');
+					
 				pleaseWaitDiv.modal({
 						show: true,
-						keyboard: false,
+						keyboard: canclosekeyb,
 						backdrop: 'static'
 				});
 
@@ -244,6 +360,9 @@
 			},
 			hidePleaseWait: function () {
 				pleaseWaitDiv.modal('hide');
+			},
+			isvisible: function () {
+				return $('#pleaseWaitDialog').is(':visible')
 			},
 
 		};
@@ -255,11 +374,57 @@
     log the event data, so you can see what's going on.
     Shows up in the console on your browser. (Chrome: Tools > Developer Tools > Console)
     */
-    console.log( data );
+    //console.log( data );
+	if (!jQuery.isEmptyObject(data.email)) {
+		
+		//check if the testmail could be sent, if not ALERT!
+		if (!data.email.ok) {
+			bootbox.alert("EMAIL: There was a problem sending your testmail! The return message is <strong>"+data.email.msg+"</strong>. Please check your settings.");
+		}
+		else 
+		{
+			bootbox.alert("EMAIL: Succesfully sent. The return message is  <strong>"+data.email.msg+"</strong>.");
+		}
+		
+		
+	}
 	
 	if (!jQuery.isEmptyObject(data.printer)) {
 		/* Printerstatus is not empty, handle it  */
 		//alert("Printer Heating up:"+data.printer.isheatingup); 
+		
+		serialon=data.printer.initok;
+		
+		if (!serialon) { 
+			//disable all controls for serial stuff here
+			$('#btn_serial_toggle').text("start");
+		}
+		else
+		{
+			$('#btn_serial_toggle').text("stop");
+		}
+				
+		//Check if status for streaming changed
+		if (data.printer.isstreaming != streamswitch) {
+			streamswitch = data.printer.isstreaming;
+			//alert (data.printer.isstreaming);
+		
+				if (streamswitch) {
+					if (data.printer.streamingmode == "sd") {
+					
+						str_body = 	'<div class="progress"><div id="progress_print_modal" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">0%</div></div>' +
+									'<h4><span id="progress_print_ptl_modal"></span></h4>';
+						//myDialogs.showPleaseWait("Streaming to SD-Card", str_body , true);
+					}
+				}
+				else
+				{
+					//alert (myDialogs.isvisible());
+					if (myDialogs.isvisible()) { myDialogs.hidePleaseWait(); }
+				}
+			
+			
+		}
 		
 		if (data.printer.isprinting) {
 			$('#umstatus').html("Status: "+data.printer.status+" "+ "File: "+data.printer.file[0]
@@ -280,17 +445,51 @@
 		
 		
 
-		if (data.printer.isprinting) {
-			if (!$('#print_progress_div').is(':visible')) {$('#print_progress_div').show();}
-			//$('#print_progress_div').show();
+		if (data.printer.isprinting || data.printer.isstreaming) {
+			//if (!$('#print_progress_div').is(':visible')) {$('#print_progress_div').show();}
+			
+			//enable the control buttons
+			//$('#but_nav_print_abort').html('<span class="glyphicon glyphicon-stop"></span>');
+			$('#but_nav_print_abort').prop('disabled', false);
+			$("#but_nav_print_abort").removeClass("btn-default").addClass("btn-danger");
+			$('#but_nav_print_pause').prop('disabled', false);
+			//$( "#btn_group_printctl" ).show();
+			
+			
 			$('#progress_print').css('width', data.printer.progress[0]+'%').attr('aria-valuenow', data.printer.progress[0]);
 			$('#progress_print').html(data.printer.progress[0]+'%');
 			
-			$('#progress_print_ptl').html("Print time left: "+data.printer.progress_time[2]);
+			//$('#progress_print_modal').html(data.printer.progress[0]+'%');
+			//$('#progress_print_modal').css('width', data.printer.progress[0]+'%').attr('aria-valuenow', data.printer.progress[0]);
+			
+			if (!data.printer.isstreaming) {
+				$('#progress_print_ptl').html("Print time left: "+data.printer.progress_time[2]);
+			} 
+			else
+			{ 
+				$('#progress_print_ptl').html("Line "+data.printer.progress[1]+" / "+data.printer.progress[2]+", est. "+data.printer.progress_time[2]+" to go.");	
+				//$('#progress_print_ptl_modal').html("Line "+data.printer.progress[1]+" / "+data.printer.progress[2]);	
+			}
 		}
 		else
 		{
-			if ($('#print_progress_div').is(':visible')) {$('#print_progress_div').hide();}
+			$('#progress_print').css('width', '0%').attr('aria-valuenow', 0);
+			$('#progress_print').html('0%');
+			$('#progress_print_ptl').html("");
+			
+			//$('#but_nav_print_abort').html('<span class="glyphicon glyphicon-play"></span>');
+			$('#but_nav_print_abort').prop('disabled', true);
+			$("#but_nav_print_abort").removeClass("btn-danger").addClass("btn-default");
+			$('#but_nav_print_pause').prop('disabled', true);
+			
+			
+			
+			//$( "#btn_group_printctl" ).hide();
+			
+			//$('#progress_print_modal').css('width', '0%').attr('aria-valuenow', 0);
+			//$('#progress_print_modal').html('0%');
+			//$('#progress_print_ptl_modal').html("");
+			
 		}
 		
 		if($("#temp_ext_current").length != 0) {
@@ -308,19 +507,25 @@
 				
 				if($("#select_files").length != 0) { //it exists
 					
-					$('#select_files').children().remove();
+					$('#select_files').empty();
+					
+					$('#select_select').selectpicker('refresh');
+					//$('#select_files').val(null).trigger("change");
 								
 					
 					for (var i = 0; i < data.printer.sdfiles.length; i++) {
 					//alert(data.printer.sdfiles[i]);
-					$('#select_files').append('<option>'+data.printer.sdfiles[i]+'</option>');
+					$('#select_files').append('<option data-icon="glyphicon-sd-video" data-subtext="on sd-card">'+data.printer.sdfiles[i]+'</option>');
 
+				}
+				
 					$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span>');
 					$('#btnrefresh').prop('disabled', false);
 					$('#select_files').prop('disabled', false);
+					$('#select_files').selectpicker('refresh');
 					$('#btngroup-fileprint button').removeAttr('disabled');
 					
-				}
+				
 					
 				
 				}
@@ -356,6 +561,7 @@
 	
 	
 	$('#tlbutton_menu').html(rec_icon + data.cam.tlstatus);
+	$('#but_nav_tl_toggle').html(rec_icon);
 	
 	if (data.cam.camonline) {
 		camisactive=true;
@@ -363,6 +569,9 @@
 		$('#tlbutton_menu_li').removeClass( "disabled" );
 		$('#tlbutton_ss').removeClass( "disabled" );
 		$('#tlbutton_menu_ss').removeClass( "disabled" );
+		
+		$('#but_nav_tl_toggle').prop('disabled', false);
+		$('#but_nav_tl_picture').prop('disabled', false);
 		
 		}
 		else
@@ -372,11 +581,14 @@
 		$('#tlbutton_menu_li').addClass( "disabled" );
 		$('#tlbutton_ss').addClass( "disabled" );
 		$('#tlbutton_menu_ss').addClass( "disabled" );
+		
+		$('#but_nav_tl_toggle').prop('disabled', true);
+		$('#but_nav_tl_picture').prop('disabled', true);
 		}
 	
 	
 	if (global_tlon) {rec_status_icon="<span class='glyphicon glyphicon-time'></span> "; } else {rec_status_icon="";}
-	$('.recordingstatus').html( rec_status_icon + data.cam.recordingstatus);
+	$('#recordingstatus').html( rec_status_icon + data.cam.recordingstatus);
 		
 	
 	}
@@ -401,6 +613,38 @@
 			}
 	}
 	}
+	
+	function sendAbortPrint(){
+
+		
+		
+		bootbox.confirm("Are you sure you want to abort printing / streaming?", function(result) {
+		 if (result) {
+		   //Do it
+			params = { op: "abortprint"};
+			$.getJSON( '/com' , params, function(data) {
+					bootbox.alert("PRINT: STOP sent! Returned was: "+data.info, function() {
+						//$('#btn_serial_toggle').text("start");
+						//$('#btn_serial_toggle').prop('disabled', false);
+					});
+	  	
+				});
+			
+					
+		 }
+		}); 
+	}
+	
+	function sendPausePrint(){
+
+		bootbox.alert("NOT IMPLEMENTED", function() {
+			//$('#btn_serial_toggle').text("start");
+			//$('#btn_serial_toggle').prop('disabled', false);
+		});
+
+	}
+	
+	
 	
 	function ShowSettings(){
 		
@@ -551,9 +795,8 @@
 						<label for="lights_off_oncomplete" class="col-sm-5 control-label">Lights OFF on print complete  </label>
 						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_off_oncomplete"></div>
 					  </div>
-					  
 				  </form>
-								
+			
 				</div>
 				<div role="tabpanel" class="tab-pane" id="notifications">
 					
@@ -572,7 +815,7 @@
 							<div class="input-group">
 							  <input type="text" class="form-control" id="input_email_to">
 							  <span class="input-group-btn">
-								<button id="btn_testmail" class="btn btn-secondary" type="button" onclick="javascript:  TestMail(); $('#btn_testmail').text('e-mail sent!'); ">send test e-mail</button>
+								<button id="btn_testmail" class="btn btn-secondary" type="button" onclick="javascript:  TestMail(this); $('#btn_testmail').text('e-mail sent!'); ">send test e-mail</button>
 							  </span>
 							</div>
 						</div>
@@ -598,24 +841,37 @@
 				<div role="tabpanel" class="tab-pane" id="webserver">
 					
 					<form class="form-horizontal" role="form">
+					
+				  
 					  <div class="form-group">
 						<label for="input_tornadoport" class="col-sm-5 control-label">Tornado / Web Port</label>
 						<div class="col-sm-7">
 						  <input type="number" class="form-control" id="input_tornadoport">
 						</div>
 					  </div>
-					  
-					  <div class="form-group">
+					
+						<div class="form-group">
 						
 						<label for="input_mjpg_start_cmd" class="col-sm-5 control-label">mjpg start command</label>
 						<div class="col-sm-7">
-						  <input type="text" class="form-control" id="input_mjpg_start_cmd">
-						</div>
-						<label for="input_mjpg_stop_cmd" class="col-sm-5 control-label">mjpg stop command</label>
-						<div class="col-sm-7">
-						  <input type="text" class="form-control" id="input_mjpg_stop_cmd">
+							<div class="input-group">
+							  <input type="text" class="form-control" id="input_mjpg_start_cmd">
+							  <span class="input-group-btn">
+								<button id="btn_mjpg_start" class="btn btn-secondary" type="button" onclick="javascript:  startstopmjpg(this, 'start'); ">run</button>
+							  </span>
+							</div>
 						</div>
 						
+						<label for="input_mjpg_stop_cmd" class="col-sm-5 control-label">mjpg stop command</label>
+						<div class="col-sm-7">
+							<div class="input-group">
+							  <input type="text" class="form-control" id="input_mjpg_stop_cmd">
+							  <span class="input-group-btn">
+								<button id="btn_mjpg_stop" class="btn btn-secondary" type="button" onclick="javascript:  startstopmjpg(this, 'stop'); ">run</button>
+							  </span>
+							</div>
+						</div>
+
 						<label for="mjpg_autostart" class="col-sm-5 control-label">mjpg autostart </label>
 						<div class="col-sm-7">
 						  <input type="checkbox" class="form-control" id="mjpg_autostart">
@@ -651,16 +907,24 @@
 						  <input type="text" class="form-control" id="input_mjpg_urlstream">
 						</div>
 					  </div>
-					  
+					
 					</form>
 				</div>
 				<div role="tabpanel" class="tab-pane" id="serial">
 					<form class="form-horizontal" role="form">
 						  <div class="form-group">
+							
 							<label for="input_serial_port" class="col-sm-5 control-label">Serial Port</label>
 							<div class="col-sm-7">
-							  <input type="text" class="form-control" id="input_serial_port">
+								<div class="input-group">
+								  <input type="text" class="form-control" id="input_serial_port">
+								  <span class="input-group-btn">
+									<button id="btn_serial_toggle" class="btn btn-secondary" type="button" onclick="javascript:  startstopserial(this); ">toggle</button>
+								  </span>
+								</div>
 							</div>
+							
+
 						  </div>
 						  <div class="form-group">
 							<label for="input_serial_baud" class="col-sm-5 control-label">Serial Baud</label>
@@ -733,8 +997,9 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-		  <a class="navbar-brand" href="/"><img src="/images/logo_sm.png" alt="" style="padding-right: 5px; margin-top: -5px; height: 100%;">{{ title }}</a>
-        </div>
+		  <!--<a class="navbar-brand" href="/"><img src="/images/logo_sm.png" alt="" style="padding-right: 5px; margin-top: -5px; height: 100%;">{{ title }}</a>-->
+		  <a class="navbar-brand" href="/"><span><img src="/images/logo_sm.png" style="padding-right: 5px; margin-top: -5px; height: 100%;" /></span>{{ title }}</a>
+		</div>
         <div class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
 			{% block navigation %} {% end %}
@@ -754,42 +1019,95 @@
           </ul>
         </div><!--/.nav-collapse -->
 		<hr style="margin: 0; padding: 0; padding-bottom: 5px;" />
-		<div class="container">
+		<div class="navbar-container">
                 
-				<div class="row" style="margin-top: 5px; ">
-                    <div class="col-sm-3">
-               			<span class="recordingstatus">Status loading...</span>
+				<div class="row">
+                    
+					<div class="col-sm-6">
+						
+						<div class="panel panel-default panel-navbar">
+							<div class="panel-body panel-navbar-body">
+							<span id= "recordingstatus">Status loading...</span>
+													
+							
+							<div class="btn-group btn-group-sm pull-right" role="group" aria-label="camera control">
+							  <button type="button" id="but_nav_tl_toggle" onclick="javascript: ToggleTL(); "   class="btn btn-default" title="Toggle timelapse"><span class="glyphicon glyphicon-play"></span></button>
+							  <button type="button" id="but_nav_tl_picture" onclick="javascript: ScreenShot(); " class="btn btn-default" title="Take picture"><span class="glyphicon glyphicon-camera"></span></button>
+							</div>
+							
+							
+						  </div>
+						</div>
                     </div>
-					<div class="col-sm-9">
-						<span class="pull-left" style="padding-right: 2px;">Diskstatus:</span>
-						<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
-							<div id="progress_space" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
-							0%
+					
+					<div class="col-sm-6">
+						
+						<div class="panel panel-default panel-navbar">
+							<div class="panel-body panel-navbar-body">
+							
+								<div id="print_progress_div">	
+									<span class="pull-left" style="padding-right: 2px;">Progress: </span>
+									<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
+										<div id="progress_print" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+											0%
+										</div>
+									</div>
+								</div>
+								<span id="progress_print_ptl" class="pull-left"></span>
+								
+							
+								<div id="btn_group_printctl" class="btn-group btn-group-sm pull-right" role="group" aria-label="print control">
+								  <button type="button" id="but_nav_print_abort" onclick="javascript: sendAbortPrint(); "   class="btn btn-default" title="Stop print / stream"><span class="glyphicon glyphicon-stop"></span></button>
+								  <button type="button" id="but_nav_print_pause" onclick="javascript: sendPausePrint(); "   class="btn btn-default" title="Pause print / stream"><span class="glyphicon glyphicon-pause"></span></button>
+								</div>
+								
+								
+							</div>
+						</div>					
+					</div>				
+					
+					
+                </div>
+				<div class="row">
+                    
+					
+					<div class="col-sm-3">
+               			<div class="panel panel-default panel-navbar">
+							<div class="panel-body panel-navbar-body">
+								<span id="umstatus">No serial connection...</span>	
 							</div>
 						</div>
-						<span class="freevalue pull-left" style="padding-left: 2px;"></span>
-					</div>
-                </div>
-				<div class="row" style="margin-top: 5px; margin-bottom: 5px; ">
-                    <div class="col-sm-3">
-               			<span id="umstatus">No serial connection...</span>	
+							
                     </div>
-					<div class="col-sm-4">
-						<span id="umstatus_temp"  style="display: none;">Temp: E: 0.0°C, B: 0.0°C</span>
+					
+					
+					<div class="col-sm-3">
+						<div class="panel panel-default panel-navbar">
+							<div class="panel-body panel-navbar-body">
+								<span id="umstatus_temp"  style="display: none;">Temp: E: 0.0°C, B: 0.0°C</span>
+							</div>
+						</div>
 					</div>
 					
-					<div class="col-sm-5">
+					<div class="col-sm-6">
                       
-					  <div id="print_progress_div" style="display: none;">	
-							<span class="pull-left" style="padding-right: 2px;">Print progress:</span>
+						<div class="panel panel-default panel-navbar">
+							<div class="panel-body panel-navbar-body">
+					
+							<span class="pull-left" style="padding-right: 2px;">Diskspace: </span>
 							<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
-								<div id="progress_print" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+								<div id="progress_space" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
 								0%
 								</div>
 							</div>
-							<span id="progress_print_ptl">Estimating time left...</span>
+							<span class="freevalue pull-left" style="padding-left: 2px;"></span>
+							
+							
+						  
+						  </div>
 						</div>
-						
+					  
+					  
                     </div>
                 </div>
 				
