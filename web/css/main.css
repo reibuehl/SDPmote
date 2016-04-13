@@ -23,13 +23,62 @@ body {
 }
 */
 
+/* BORDER for TABS go here (does not look good if small / mobile */
+
+/*
+.tab-content {
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+	border-bottom: 1px solid #ddd;
+    border-radius: 0px 0px 5px 5px;
+    padding: 10px;
+}
+
+.nav-tabs {
+    margin-bottom: 0;
+}
+*/
+
+.navbar-container { }
+.panel-navbar { 
+	min-height: 35px;
+	margin-bottom: 5px;
+	background-color: #fefefe;
+    border: 1px solid #dddddd;
+    border-radius:2px;
+	outline: none;
+	-webkit-box-shadow: none !important;
+	-moz-box-shadow: none !important;
+	box-shadow: none !important;
+	
+	}
+.panel-navbar-body { padding: 5px;}
+
+.progress {
+	min-height: 20px;
+	text-align:center;
+}
+.progress-value {
+    position:absolute;
+    right:0;
+    left:0;
+}
+
+/* css to center the bootsrap progress bars text (needs a span with the class center) */
+.progress .center {
+    position: absolute;
+    display: block;
+    width: 100%;
+    color: black;
+}
+
 .divide-nav{
   /* height: 185px; */
   /* background-color: #428bca; */
 }
 
 .thumb-hover {
-	min-height: 340px;
+	min-height: 370px;
 }
 
 
