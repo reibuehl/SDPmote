@@ -25,51 +25,36 @@ import re
 import os
 import helpers
 
-#prototype, do not try out :)
-def TestSaveSD():
-	testfile=sp.SaveFiletoSD(os.path.join("web", "temp", "test.gcode") )
-	print "Has: "+str(testfile.linecount())+" LINES"
-	
-	testfile.close()
-	testfile.open()
-	
-	f = open(os.path.join("web", "temp", "testCOPY.gcode") ,'w')
-
-	
-	while 1:
-		eof, line = testfile.nextline()
-		if eof == True: break
-		f.write (line)
-		print line
-	
-	f.close()
-	
-	
 #Serial Interface Class, currently only works on the PI
 class SerialProcess_mp(multiprocessing.Process):
  
-	def __init__(self, port, baud, timeo, taskQ, resultQ):
+	def __init__(self, port, baud, timeo, taskQ, resultQ, gcode_dirs):
 		multiprocessing.Process.__init__(self)
 		self.taskQ = taskQ
 		self.resultQ = resultQ
+		self.gcode_dirs = gcode_dirs
 		self.port = port
 		self.baud = baud
 		self.timeout = timeo
 		self.initOK = False
-		
+	
 		self.m105intervallsec = 9
+		self.tempmonitor_enabled = True
 		self.m27intervallsec = 10
 		
 		self.printer_statusdisplay = "unknown" #idle, unknown, printing, heating up bed, heating up extruder, print finished
 		self.printer_heatingup = False
 		self.print_start_countdown=-1 #stores the value as serial commands start to count down before startprint (W:?)
 		self.printer_isprinting = False
-		self.printer_sdstream = False
+		self.printer_isstreaming = False
+		self.printer_streamingmode=""
 		self.printer_temp = (0.0, 0.0,0.0,0.0)
 		self.printer_progress = (0.0, 0 ,0)
 		self.printer_fileselected = ("", 0)
 		# record time of print start, elapsed, expected time to finish
 		self.print_time = (datetime.datetime.now(), datetime.timedelta(seconds=+1), "00:00:00")
+		
+		self.writetofilereceived = False
 		
 		self.getfilelistflag=False
 		self.sdfilelist = []
@@ -91,33 +76,51 @@ class SerialProcess_mp(multiprocessing.Process):
 		self.regex_sdFileOpened = re.compile("File opened:\s*(.*?)\s+Size:\s*(%s)" % self.intPattern)
 		self.regex_temp = re.compile("(B|T(\d*)):\s*(%s)(\s*\/?\s*(%s))?" % (self.positiveFloatPattern, self.positiveFloatPattern))
 		
+		self.tryopen()
+		
+	def tryopen(self):
+	
 		try:
 			self.sp = serial.Serial(self.port, self.baud, timeout=self.timeout)
-			print "Serial interface on Port "+str(self.port)+" open."
-			self.printer_statusdisplay = str(self.port)+" ready."
+			msg=str(self.port)+" ready."
+			self.printer_statusdisplay =  msg
 			self.initOK = True
+			print msg
 		except Exception as e:
-			print "Serial interface on Port "+str(self.port)+" could not open."
-			print "Error: {name} ({msg}).".format(
-			name=e.__class__.__name__, 
-			msg=e)
+			msg = "Serial interface on Port "+str(self.port)+" could not open. Error: {name} ({msg}).".format(name=e.__class__.__name__, msg=e)
 			self.printer_statusdisplay = "Unable to open "+str(self.port)
+			self.sp = None
 			self.initOK = False
+			print msg
 		
 		self.resultQ.put({"CMD": "STATUS", "DATA": self.GetPrinterStatus()})
-		
-		
+		return (msg)
+	
 	def close(self):
-		self.initOK = False
-		#time.sleep(1)
-		if self.initOK == True:
-			self.sp.close()
- 
+		
+		if self.initOK:
+			self.initOK = False
+			self.taskQ.put({"CMD": "KILL"})
+		
+			if(not(self.sp == None)):
+				self.sp.close()
+				self.sp = None
+			
+		self.printer_statusdisplay = str(self.port)+" closed."
+		self.resultQ.put({"CMD": "STATUS", "DATA": self.GetPrinterStatus()})
+				
+		print self.printer_statusdisplay
+		return (self.printer_statusdisplay)
+
 	def sendData(self, data):
 		print "sendData start..."
 		self.sp.write(data+ '\n')
 		time.sleep(.1)
 		print "sendData done: " + data
+		
+	def updateweblog(self, cmd):
+		self.resultQ.put({"CMD": "UPDATE_SERIAL_LOG", "DATA": cmd})
+		
 	
 	def parseTemp(self, line):
 		result = {}
@@ -164,12 +167,15 @@ class SerialProcess_mp(multiprocessing.Process):
 
 	def GetPrinterStatus(self):
 		
-		if self.printer_isprinting:
+		if self.printer_isprinting or self.printer_isstreaming:
 			self.print_updatetime()
 					
 		return {"status": self.printer_statusdisplay,
+				"initok": self.initOK,
 				"isheatingup": self.printer_heatingup,
 				"isprinting": self.printer_isprinting,
+				"isstreaming": self.printer_isstreaming,
+				"streamingmode": self.printer_streamingmode,
 				"temp": self.printer_temp,
 				"progress": self.printer_progress,
 				"progress_time": (self.print_time[0].strftime("%d.%B %Y %H:%M"), helpers.seconds_to_dhms_string(self.print_time[1].total_seconds()), self.print_time[2]),
@@ -179,58 +185,241 @@ class SerialProcess_mp(multiprocessing.Process):
 				"print_start_countdown": self.print_start_countdown
 				}
 	
-	class SaveFiletoSD():
-		def __init__(self, file):
+	
+	#Stream or Save to SD starter
+	def StreamOrSaveSD(self, mode, filename):
+		self.printer_isstreaming = True
+		self.printer_streamingmode = mode #"sd" or "print" or ""
+		
+
+		if self.printer_streamingmode == "sd":
+			# to SD - Card
+			self.tempmonitor_enabled = False			
+			self.filetostream=self.StreamFile(os.path.join(self.gcode_dirs["root_dir"], self.gcode_dirs["sd-card_dir"], filename), self.printer_streamingmode)
+			print "File "+self.filetostream.filename+" has "+str(self.filetostream.getlinecount())+" lines, size is "+self.filetostream.filesize_str
+			self.printer_fileselected = (self.filetostream.filename, self.filetostream.filesize)
+			self.print_setstarttime()
+			
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M28 " + self.filetostream.getsdfilename()})
+		else:
+			# Stream it! First LINE to kick it off
+			self.filetostream=self.StreamFile(os.path.join(self.gcode_dirs["root_dir"], self.gcode_dirs["print_dir"], filename), self.printer_streamingmode)
+			print "File "+self.filetostream.filename+" has "+str(self.filetostream.getlinecount())+" lines, size is "+self.filetostream.filesize_str
+			
+			self.printer_fileselected = (self.filetostream.filename, self.filetostream.filesize)
+			self.printer_statusdisplay= "Streaming " + self.filetostream.filename + " (" + self.filetostream.filesize_str +")"
+			
+			eof, gcode_line, lnr = self.filetostream.nextline()
+			if eof == True:
+				self.toggle_stopprint()
+				return True
+			
+
+			
+			self.taskQ.put({"CMD": "SERIAL", "DATA": gcode_line})
+	
+	
+	class StreamFile():
+		def __init__(self, file, scope):
 			
 			self.filehandle = None 
-			self.filename=file
+			self.filenameandpath = file
+			self.filename = os.path.basename(self.filenameandpath)
 			
+			#create a filename that can be stored on the sd-card
+			self.sdfilename=self.make83filename(self.filename)
+						
 			self.currentline = 0
+			self.linecount = -1
 			
-			if not os.path.exists(self.filename) or not os.path.isfile(self.filename): 
-				raise IOError("File %s does not exist" % self.filename) 
-			self.filesize = os.stat(self.filename).st_size
+			if not os.path.exists(self.filenameandpath) or not os.path.isfile(self.filenameandpath): 
+				raise IOError("File %s does not exist" % self.filenameandpath) 
+			self.filesize = os.stat(self.filenameandpath).st_size
+			self.filesize_str = helpers.bytes2human(self.filesize)
+			
+			self.scope = scope # "sd": Safe to SD-Card / "print": streams directly to printer
 			
 			self.open()
+			self.linecount = self.enum_file()
 			
-		def linecount(self):
+		def setfileeof(self):
+			self.filehandle.seek(self.linecount+1)
+			self.currentline=self.linecount+1
+		
+		def getlinecount(self):
+			return self.linecount
+		
+		def checksum(self, cmd_tosend):
+			#return reduce(lambda x,y:x+y, map(ord, cmd_tosend))
+			
+			#xor way with per char ascii
+			checksum=0			
+			for ch in cmd_tosend:
+				checksum ^= ord(ch)
+			return "*"+str(checksum)
+		
+		def enum_file(self):
 			try:
 				for i, line in enumerate(self.filehandle):
 					pass
+					#checking for cura specific slicer settings...
+					#if ";Sliced at: " in line: print line.strip()
+					#if ";Basic settings: " in line: print line.strip()
+					#if ";Print time: " in line: print line.strip()
+					#if ";Filament used: " in line: print line.strip()
 			finally:
 				pass
+			self.filehandle.seek(0)
 			return i+1
 			
-			#reset position by reopening seek(0) on the handle does not seem to work... #needs to close the file and reopen it!
-
-
 		def getcurrentline(self):
 			return self.currentline
 		
 		def open(self):
-			#open the file for reading
-			self.filehandle = open(self.filename, "r")
+			#open the file for reading, needs to be in r+ (write also) mode to enable seek
+			self.filehandle = open(self.filenameandpath, "r+")
 			
 		def close(self):
 			self.filehandle.close() 
 			self.filehandle = None 
-
-		def nextline(self):
-			self.currentline=self.currentline+1
-			line=self.filehandle.readline()
-
-			#EOF handling
-			if not line: 
-				self.close()
-				return True, ""
+		
+		def getsdfilename(self):
+			return self.sdfilename
+		
+		def make83filename(self, fname):
+			#VEEEERY simple... uuh, needs a better algorythm second file will be overwritten
+			filename, file_extension = os.path.splitext(fname)
 			
-			return False, line
+			if len(filename) > 8:
+				fname83 = filename[:6] +"~1"+ ".gco"
+			else:
+				fname83 = filename + ".gco"
+				
+			return fname83.replace(" ", "_").lower()
+		
+		def nextline(self):
+	
+			while True:
+			
+				self.currentline=self.currentline+1
+				
+				ori_line=self.filehandle.readline() #.strip() will use strip for streaming
+				
+				#EOF handling
+				if not ori_line: 
+					self.close()
+					return True, "", self.currentline
+					
+				#get rid of all comments and whitespace
+				line = ori_line.split(';', 1)[0]
+				line = line.rstrip()
+										
+				#if empty (comment, blank...) advance
+				if len(line.strip()) == 0 or len(line)==0 or line =="":
+					# do something with empty line
+					pass
+				else: 
+					#print str(self.currentline)+":LINE:"+line+"--L:"+str(len(line))+":O:"+ori_line
+					break
+				
+			return False, line, self.currentline 
+	
+	
+	def abort_print(self, msg):
+		self.printer_statusdisplay =  msg
+		
+		if self.printer_isprinting == True and self.printer_isstreaming == False:
+			#print from SD card
+			print "ABORT: SD-Printing..."
+			self.printer_progress = (0.0,0,0)
+			
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M25"})
+			self.taskQ.put({"M26 S0"}) #Reset file Position
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M107"})#FAN OFF
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M104 S0"})#extruder heater off
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M140 S0"})#heated bed heater off (if you have it)
+						
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "G91"}) #relative positioning
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "G1 E-1 F300"}) #retract the filament a bit before lifting the nozzle, to release some of the pressure
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "G1 Z+0.5 E-5 X-20 Y-20 F9000"})#move Z up a bit and retract filament even more
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "G28 X0 Y0"}) #move X/Y to min endstops
+							
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M84"}) #steppers off
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "G90"}) #absolute positioning
+			
+			self.printer_isprinting=False
+				
+		
+		if self.printer_streamingmode == "print" and self.printer_isstreaming == True:
+			#streaming from the pi
+			print "ABORT: Stream printing..."
+			self.filetostream.setfileeof()
+			
+			#clear the q
+			while not self.taskQ.empty():
+				self.taskQ.get()
+			
+			self.printer_progress = (0.0,0,0)
+			self.printer_isstreaming = False
+			self.printer_streamingmode = "" #"sd" or "print" or ""
+			
+			#add print stop to the mix
+			if self.printer_isprinting:
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "M25"})
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "M107"})#FAN OFF
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "M104 S0"})#extruder heater off
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "M140 S0"})#heated bed heater off (if you have it)
+							
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "G91"}) #relative positioning
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "G1 E-1 F300"}) #retract the filament a bit before lifting the nozzle, to release some of the pressure
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "G1 Z+0.5 E-5 X-20 Y-20 F9000"})#move Z up a bit and retract filament even more
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "G28 X0 Y0"}) #move X/Y to min endstops
+								
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "M84"}) #steppers off
+				self.taskQ.put({"CMD": "SERIAL", "DATA": "G90"}) #absolute positioning
+			
+			
+			
+		if self.printer_streamingmode == "sd" and self.printer_isstreaming == True:
+			#streaming to SD from the pi
+			print "ABORT: SD-Save, deleting file..."
+			self.filetostream.setfileeof()
+			
+			#clear the q
+			while not self.taskQ.empty():
+				self.taskQ.get()
+			
+			self.printer_progress = (0.0,0,0)
+			self.printer_isstreaming = False
+			self.printer_streamingmode = "" #"sd" or "print" or ""
+			self.writetofilereceived = False
+			self.tempmonitor_enabled = True
+			
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M29"})
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M30 "+ self.filetostream.getsdfilename()})
+		
+		if self.printer_heatingup:
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M104 S0"})#extruder heater off
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M140 S0"})#heated bed heater off (if you have it)
+			self.tempmonitor_enabled = True
+		
 	
 	def toggle_stopprint(self, msg):
 		self.printer_statusdisplay =  msg
+		
 		if self.printer_isprinting:
 			self.printer_isprinting=False
 			self.resultQ.put({"CMD": "COMMAND", "DO": "PRINTSTOP"})
+		
+		if self.printer_streamingmode == "sd":
+			self.taskQ.put({"CMD": "SERIAL", "DATA": "M29"})
+			self.tempmonitor_enabled = True
+		
+		if self.printer_streamingmode == "print":
+			self.printer_isstreaming = False
+			self.printer_streamingmode = "" #"sd" or "print" or ""
+
+		
 	
 	def toggle_startprint(self, msg):
 		self.printer_statusdisplay = msg
@@ -244,6 +433,69 @@ class SerialProcess_mp(multiprocessing.Process):
 	def monitor(self, line):
 	
 		news=False
+		
+		if 'Writing to file:' in line and self.printer_isstreaming:
+			#this means M28 was issued with a new file, you can now start to stream
+			self.printer_statusdisplay =  "Streaming " + self.filetostream.filename + " to " + self.printer_streamingmode
+			self.writetofilereceived = True
+			return True
+		
+		if 'open failed,' in line and self.printer_isstreaming:
+			self.printer_statusdisplay =  "Error saving " + self.filetostream.getsdfilename() + " to SD-Card"
+			self.printer_progress = (0.0,0,0)
+			self.printer_isstreaming = False
+			self.printer_streamingmode = "" #"sd" or "print" or ""
+			self.writetofilereceived = False
+			self.tempmonitor_enabled = True
+			
+			return True
+		
+		if line == 'ok' and self.printer_isstreaming:
+			#ok after M28 or subsequent lines to save the file to SD
+			#uh... receive an ok if there are spaces in the m28 filename... so make sure it's not starting to stream directly it that happens
+			doreturn=True
+			
+			if not self.writetofilereceived and self.printer_streamingmode == "sd":
+				self.printer_statusdisplay =  "Error saving " + self.filetostream.getsdfilename() + " to SD-Card"
+				print  "ABORT: Error saving " + self.filetostream.getsdfilename() + " to SD-Card"
+				self.printer_progress = (0.0,0,0)
+				self.printer_isstreaming = False
+				self.printer_streamingmode = "" #"sd" or "print" or ""
+				self.writetofilereceived = False
+				self.tempmonitor_enabled = True
+				return True
+			
+			
+			eof, gcode_line, lnr = self.filetostream.nextline()
+			if eof == True:
+				#end of file, so streaming is done!
+				self.toggle_stopprint("STREAM: EOF received, streaming done.")
+				return True
+				
+			if lnr % 50 == 0:
+				lineprintedpercentage=float(lnr) / float(self.filetostream.getlinecount()) * 100
+				self.printer_progress = ( round(lineprintedpercentage, 2) , lnr, self.filetostream.getlinecount())
+				doreturn=True
+			else:
+				doreturn=False
+			
+			#hang on for 10 milisecond to make sure the buffer catches up
+			#time.sleep(0.01)
+			self.taskQ.put({"CMD": "SERIAL", "DATA": gcode_line})
+			#time.sleep(0.01)
+		
+			return doreturn
+
+				
+		if 'Done saving file.' in line and self.printer_isstreaming:
+			#stream finished, file written
+			self.printer_statusdisplay =  "Saved " + self.filetostream.getsdfilename() + " to SD-Card"
+			self.printer_progress = (0.0,0,0)
+			self.printer_isstreaming = False
+			self.printer_streamingmode = "" #"sd" or "print" or ""
+			self.writetofilereceived = False
+			self.tempmonitor_enabled = True
+			return True
 		
 		if 'Begin file list' in line:
 			self.getfilelistflag=True
@@ -268,6 +520,7 @@ class SerialProcess_mp(multiprocessing.Process):
 			news=True
 			#Warming up to print
 			self.printer_heatingup=True
+			self.tempmonitor_enabled = False
 			
 			
 			if 'B:' in line:
@@ -295,6 +548,7 @@ class SerialProcess_mp(multiprocessing.Process):
 					if self.print_start_countdown <= 1:
 						#tooggle print start with notification
 						self.toggle_startprint("Heating DONE, start printing.")
+						self.tempmonitor_enabled = True
 						
 					else:
 						self.printer_statusdisplay =  "Heating DONE, start in "+str(self.print_start_countdown)
@@ -304,7 +558,7 @@ class SerialProcess_mp(multiprocessing.Process):
 		if 'ok T' in line:
 			news=True
 			#answering M105 with ok to get Temp readings "ok T:21.5 /0.0 B:18.7 /0.0 T0:21.5 /0.0 @:0 B@:0"
-			#	 "ok T:24.0 /0.0 B:20.6 /0.0 @:0 B@:0" !!!!UM2!!!!!
+			#											 "ok T:24.0 /0.0 B:20.6 /0.0 @:0 B@:0" !!!!UM2!!!!!
 			
 			#line = "ok T:24.0 /0.0 B:20.6 /0.0 @:0 B@:0"
 			
@@ -387,16 +641,17 @@ class SerialProcess_mp(multiprocessing.Process):
 			
 			temp_m105intervall = self.makeNewTimeout(self.m105intervallsec)
 			temp_m27intervall = self.makeNewTimeout(self.m27intervallsec)
-
+		
 		while (self.initOK == True):
 			
 			#check for intervall tasks
-			if  time.time() > temp_m105intervall and not self.printer_heatingup:
+			if  time.time() > temp_m105intervall and self.tempmonitor_enabled:
 				self.taskQ.put({"CMD": "SERIAL", "DATA": "M105"})
 				temp_m105intervall = self.makeNewTimeout(self.m105intervallsec)
 			
-			if  time.time() > temp_m27intervall and self.printer_isprinting:
-				self.taskQ.put({"CMD": "SERIAL", "DATA": "M27"})
+			if  time.time() > temp_m27intervall:
+				if self.printer_isprinting and (not self.printer_isstreaming):
+					self.taskQ.put({"CMD": "SERIAL", "DATA": "M27"})
 				temp_m27intervall = self.makeNewTimeout(self.m27intervallsec)
 			
 						
@@ -405,9 +660,29 @@ class SerialProcess_mp(multiprocessing.Process):
 				task = self.taskQ.get()
 				# send it to the arduino
 				if task["CMD"] == "SERIAL":
-					print time.strftime("%H:%M:%S")+" sent: " + task["DATA"]
-					self.sp.write(str(task["DATA"])+ '\n')
 					
+					#if not self.printer_isstreaming:
+					print time.strftime("%H:%M:%S")+" sent: " + task["DATA"]
+					self.updateweblog(time.strftime("%H:%M:%S")+" sent: "+task["DATA"])
+					self.sp.write(str(task["DATA"])+ '\n')
+					#time.sleep(0.01)
+				
+				if task["CMD"] == "SAVESD":
+					print "SAVING"+ str(task["DATA"]) + " to SD-Card"
+					self.StreamOrSaveSD("sd", str(task["DATA"]))
+				
+				if task["CMD"] == "STREAMFILE":
+					print "Streaming "+ str(task["DATA"]) + " to printer"
+					self.StreamOrSaveSD("print", str(task["DATA"]))
+					
+				if task["CMD"] == "ABORTPRINT":
+					print "SERIAL: ABORTING print / stream..."
+					self.abort_print("SERIAL: ABORTING print / stream...")
+				
+				if task["CMD"] == "KILL":
+					#break the loop and end the thread
+					self.initOK=False
+				
 				if task["CMD"] == "STARTMANUAL":
 					print "START print sent, override!"
 					self.toggle_startprint("Manual override, started printing.")
