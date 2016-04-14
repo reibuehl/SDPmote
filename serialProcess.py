@@ -361,6 +361,7 @@ class SerialProcess_mp(multiprocessing.Process):
 			
 			self.printer_progress = (0.0,0,0)
 			self.printer_isstreaming = False
+			
 			self.printer_streamingmode = "" #"sd" or "print" or ""
 			
 			#add print stop to the mix
@@ -377,6 +378,8 @@ class SerialProcess_mp(multiprocessing.Process):
 								
 				self.taskQ.put({"CMD": "SERIAL", "DATA": "M84"}) #steppers off
 				self.taskQ.put({"CMD": "SERIAL", "DATA": "G90"}) #absolute positioning
+				
+				self.printer_isprinting=False
 			
 			
 			

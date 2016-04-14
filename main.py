@@ -38,7 +38,7 @@ import sys
 #check if the current working directory is the main directory, if not abort or change to it
 
 script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
-if not os.path.dirname(__file__) == "":
+if not os.path.dirname(__file__) == "": #should this not be == script_dir?
 	#change it to the script directory here	
 	print ""
 	print "WARNING: Working directory changing to the scripts root directory."
@@ -53,7 +53,7 @@ import signal
 import datetime
 import math
 import platform
-import getopt
+import argparse
 import re
 
 #Files Stuff
@@ -129,7 +129,7 @@ printerstatus = {"status": "connecting..",
 
 emailstatus = { }
 				
-systemuser = {"hostname": helpers.gethostname(), "system": platform.system(), "username": None, "sudo": False, "sudo_uid": None, "sudo_gid": None, "gpio_enabled": gpioProcess.gpioProcess_mp.enabled}
+systemuser = {"hostname": helpers.gethostname(), "ip": helpers.get_local_ip(),  "system": platform.system(), "username": None, "sudo": False, "sudo_uid": None, "sudo_gid": None, "gpio_enabled": gpioProcess.gpioProcess_mp.enabled}
 				
 websocketclients = dict()
 
@@ -363,7 +363,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 		websocketclients[self.id] = {"id": self.id, "object": self}
 		#Send wellcome msg
 		self.write_message("You are connected with id " + str(self.id))
-		#websocketclients[self.id]["object"].write_message({"cmd": "TIME", "data": (time.time(),30.1)})
+		websocketclients[self.id]["object"].write_message({"cmd": "TIME", "data": (time.time(),30.1)})
 		
 	def on_message(self, message):        
 		"""
@@ -981,7 +981,7 @@ class RenderStatusBar:
 	def draw(self):
 		
 		text_title = self.font_title.render(mytitle, True, (255, 255, 255))
-		text_subtitle =self.font_subtitle.render("server @ http://"+ cfg.settings["Webserver"]["mjpg_ip"] + ":" + cfg.settings["Webserver"]["mjpg_port"], True, (200, 200, 200))
+		text_subtitle =self.font_subtitle.render("server @ http://"+ systemuser["ip"] + ":" + cfg.settings["Webserver"]["tornadoport"], True, (200, 200, 200))
 		
 		#BLIT the screen noti background
 		screen.blit(self.notiscreen,(self.left, self.top))
@@ -2239,28 +2239,29 @@ def PyInterfaceMainLoop():
 	t.run()
 
 	pygame.display.update()
-		
-#General DEFs go here------------------------------------------------------------------------------------------------------
-def getcmdlineargs(argv):
+	
+def getcmdlineargs():
 	global headless
 	global windowed
 	global mousevisible
+	global TornadoDebug
+
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument('-hl', '--headless', help="will start without the pygame interface", action='store_true', required=False)
+	parser.add_argument('-fs', '--fullscreen', help="will try to start pygame in fullscreen mode", action='store_false', required=False)
+	parser.add_argument('-hm', '--hidemouse', help="hides the mouse cursor in pygame", action='store_false', required=False)
+	parser.add_argument('-d', '--debug', help="start tornado in debug mode", action='store_true', required=False)
 	
-	options, rest = getopt.getopt(argv, ':hfm', ['headless', 'fullscreen', 'hidemouse'])
-	print 'OPTIONS   :', options
-
-	for opt, arg in options:
-		if opt in ('-h', '--headless'):
-			headless = True
-		elif opt in ('-f', '--fullscreen'):
-			windowed = False
-		elif opt in ('-m', '--hidemouse'):
-			mousevisible = False
-
-	print 'headless   :', headless
-	print 'windowed   :', windowed
-	print 'mousevisible   :', mousevisible
-
+	#parse
+	args = parser.parse_args()
+	
+	#update variables according to the flags
+	headless = args.headless
+	windowed = args.fullscreen
+	mousevisible = args.hidemouse
+	TornadoDebug = args.debug
+	
 def ToggleTimeLapse(setfoldername = ""):
 	
 	if mjpgCam.is_running:
@@ -2718,7 +2719,7 @@ if __name__ == '__main__':
 		
 	#get the dict filled with users (windows and Linux plus find if run with sudo).
 	systemuser=helpers.fill_user_system_dict(systemuser)
-	print "User " + systemuser["username"] + " (sudo: "+str(systemuser["sudo"])+")" + " on host " + systemuser["hostname"] + " running "+systemuser["system"]
+	print "User " + systemuser["username"] + " (sudo: "+str(systemuser["sudo"])+")" + " on host " + systemuser["hostname"] + " (IP: " + systemuser["ip"] +") running "+systemuser["system"]
 	
 	if systemuser["system"] == "Linux" and not systemuser["sudo"]:
 		#set it to false even if the GPIO module was sucessfully imported
@@ -2726,7 +2727,7 @@ if __name__ == '__main__':
 		print "This program needs elevated priviliges to access GPIOs. Try 'sudo'. GPIO access disabled."
 	
 	# Get commandline options...
-	getcmdlineargs(sys.argv[1:])
+	getcmdlineargs()
 	
 	#startup from here
 	print ""
@@ -2754,7 +2755,7 @@ if __name__ == '__main__':
 	cfg.defaults = {"General": {"pics_per_second": "5", "tl_autostart": "False", "tl_autostop": "False",
 								"email_on_complete": "False","lights_on_onstart": "False", "lights_off_oncomplete": "False", "email_to": "test@send.com", "email_from": "from@gmail.com", "email_user": "test@gmail.com", "email_pw": "***", 
 								"email_server": "smtp.gmail.com", "email_server_port": "587" },
-					"Webserver": {"mjpg_start_delay":"2", "mjpg_autostart":"False", "mjpg_autostop":"False", "mjpg_start_cmd": "./raspi_stream start","mjpg_stop_cmd": "./raspi_stream stop", "mjpg_ip": "192.168.1.15", "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "tornadoport": "8081"},
+					"Webserver": {"mjpg_start_delay":"2", "mjpg_autostart":"False", "mjpg_autostop":"False", "mjpg_start_cmd": "./raspi_stream start","mjpg_stop_cmd": "./raspi_stream stop", "mjpg_ip": "127.0.0.1", "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "tornadoport": "8081"},
 					"Serial": {"serial_port": "COM1", "serial_baud": "250000", "web_serial_ln_buffer": "250"},
 					"Printer": {"x_max_mm": "200", "y_max_mm": "200", "z_max_mm": "195", "gcode_lights_on": "M42 S255", "gcode_lights_off": "M42 S0"}}
 					
