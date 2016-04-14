@@ -21,7 +21,7 @@
 -->
 {% extends "base.html" %}
 
-{% block title %}{{ title }} - Ultimaker control and status{% end %}
+{% block title %}{{ title }} - Control and status{% end %}
 
 {% block pagescript %}
 	///CAM Stuff
@@ -52,7 +52,7 @@ function createImageLayer() {
   img.style.height = "338px";
   img.onload = imageOnload;
   img.onclick = imageOnclick;
-  img.src = "http://" + settings.Webserver.mjpg_ip +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + "&n=" + (++imageNr);
+  img.src = "http://" + location.hostname +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + "&n=" + (++imageNr);
   var webcam = document.getElementById("webcam");
   webcam.insertBefore(img, webcam.firstChild);
   $('#wcstatus').html("Webcamstatus: Streaming (Frames streamed so far: " + imageNr + ")");
@@ -85,14 +85,14 @@ function setCam() {
 				
 		
 		if (ismsie() == true) { 
-			$('#webcam').html('<noscript><img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + '" /></noscript>');
+			$('#webcam').html('<noscript><img src="http://' + location.hostname +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + '" /></noscript>');
 			$('#webcam').css("height", "338px");
 			createImageLayer();
 			$('#wcstatus').html("Webcamstatus: Webcam streaming");
 			}
 		else {
 			//for everything else, start mjpeg streming directly in browser...
-			$('#webcam').html('<img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlstream + '" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 640px;" />');
+			$('#webcam').html('<img src="http://' + location.hostname +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlstream + '" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 640px;" />');
 		}
 	}
 	else
