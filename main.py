@@ -2755,7 +2755,7 @@ if __name__ == '__main__':
 	cfg.defaults = {"General": {"pics_per_second": "5", "tl_autostart": "False", "tl_autostop": "False",
 								"email_on_complete": "False","lights_on_onstart": "False", "lights_off_oncomplete": "False", "email_to": "test@send.com", "email_from": "from@gmail.com", "email_user": "test@gmail.com", "email_pw": "***", 
 								"email_server": "smtp.gmail.com", "email_server_port": "587" },
-					"Webserver": {"mjpg_start_delay":"2", "mjpg_autostart":"False", "mjpg_autostop":"False", "mjpg_start_cmd": "./raspi_stream start","mjpg_stop_cmd": "./raspi_stream stop", "mjpg_ip": "127.0.0.1", "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "tornadoport": "8081"},
+					"Webserver": {"mjpg_start_delay":"2", "mjpg_autostart":"False", "mjpg_autostop":"False", "mjpg_start_cmd": "./raspi_stream start","mjpg_stop_cmd": "./raspi_stream stop", "mjpg_ip": systemuser["ip"], "mjpg_port": "8080", "mjpg_urlsnapshot": "/?action=snapshot", "mjpg_urlstream": "/?action=stream", "mpjg_web_override": "False", "mjpg_web_override_string": "/webcam" ,"tornadoport": "8081"},
 					"Serial": {"serial_port": "COM1", "serial_baud": "250000", "web_serial_ln_buffer": "250"},
 					"Printer": {"x_max_mm": "200", "y_max_mm": "200", "z_max_mm": "195", "gcode_lights_on": "M42 S255", "gcode_lights_off": "M42 S0"}}
 					
