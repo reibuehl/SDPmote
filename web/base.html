@@ -285,6 +285,7 @@
 		if ($("#lights_on_onstart").is(':checked')) {settings.General.lights_on_onstart="True";} else {settings.General.lights_on_onstart="False";}
 		if ($("#mjpg_autostart").is(':checked')) {settings.Webserver.mjpg_autostart="True";} else {settings.Webserver.mjpg_autostart="False";}
 		if ($("#mjpg_autostop").is(':checked')) {settings.Webserver.mjpg_autostop="True";} else {settings.Webserver.mjpg_autostop="False";}
+		if ($("#mjpg_web_override").is(':checked')) {settings.Webserver.mjpg_web_override="True";} else {settings.Webserver.mjpg_web_override="False";}
 		
 		settings.General.email_to=$("#input_email_to").val();
 		settings.General.email_from=$("#input_email_from").val();
@@ -301,6 +302,7 @@
 		settings.Webserver.mjpg_start_cmd=$("#input_mjpg_start_cmd").val();
 		settings.Webserver.mjpg_stop_cmd=$("#input_mjpg_stop_cmd").val();
 		settings.Webserver.mjpg_start_delay=$("#input_mjpg_start_delay").val();
+		settings.Webserver.mjpg_web_override_string=$("#mjpg_web_override_string").val();
 		
 		settings.Serial.serial_port=$("#input_serial_port").val();
 		settings.Serial.serial_baud=$("#input_serial_baud").val();
@@ -657,6 +659,7 @@
 		$("#input_mjpg_urlsnapshot").val(settings.Webserver.mjpg_urlsnapshot);
 		$("#input_mjpg_urlstream").val(settings.Webserver.mjpg_urlstream);
 		$("#input_tornadoport").val(settings.Webserver.tornadoport);
+		$("#mjpg_web_override_string").val(settings.Webserver.mjpg_web_override_string);
 		
 		$("#input_mjpg_start_cmd").val(settings.Webserver.mjpg_start_cmd);
 		$("#input_mjpg_stop_cmd").val(settings.Webserver.mjpg_stop_cmd);
@@ -666,6 +669,8 @@
 		
 		if (settings.Webserver.mjpg_autostart == "True") {$("#mjpg_autostart").attr('checked', true);} else {$("#mjpg_autostart").attr('checked', false);}
 		if (settings.Webserver.mjpg_autostop == "True") {$("#mjpg_autostop").attr('checked', true);} else {$("#mjpg_autostop").attr('checked', false);}
+		
+		if (settings.Webserver.mjpg_web_override == "True") {$("#mjpg_web_override").attr('checked', true);} else {$("#mjpg_web_override").attr('checked', false);}
 		
 		if (settings.General.tl_autostart == "True") {$("#tl_autostart").attr('checked', true);} else {$("#tl_autostart").attr('checked', false);}
 		if (settings.General.tl_autostop == "True") {$("#tl_autostop").attr('checked', true);} else {$("#tl_autostop").attr('checked', false);}
@@ -905,6 +910,15 @@
 					  	<label for="input_mjpg_urlstream" class="col-sm-5 control-label">mjpg Stream command</label>
 						<div class="col-sm-7">
 						  <input type="text" class="form-control" id="input_mjpg_urlstream">
+						</div>
+						<label for="mjpg_web_override_string" class="col-sm-5 control-label">mjpg webclient cam override</label>
+						<div class="col-sm-7">  
+							<div class="input-group">
+							  <span class="input-group-addon">
+								<input id="mjpg_web_override" type="checkbox">
+							  </span>
+							  <input id="mjpg_web_override_string" type="text" class="form-control">
+							</div>
 						</div>
 					  </div>
 					
