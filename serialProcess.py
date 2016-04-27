@@ -190,6 +190,7 @@ class SerialProcess_mp(multiprocessing.Process):
 	def StreamOrSaveSD(self, mode, filename):
 		self.printer_isstreaming = True
 		self.printer_streamingmode = mode #"sd" or "print" or ""
+		#self.printer_progress = (0.0, 0 ,0)
 		
 
 		if self.printer_streamingmode == "sd":
@@ -472,6 +473,7 @@ class SerialProcess_mp(multiprocessing.Process):
 			eof, gcode_line, lnr = self.filetostream.nextline()
 			if eof == True:
 				#end of file, so streaming is done!
+				self.printer_progress = (100.0,0,0)
 				self.toggle_stopprint("STREAM: EOF received, streaming done.")
 				return True
 				
