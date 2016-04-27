@@ -190,7 +190,7 @@ class SerialProcess_mp(multiprocessing.Process):
 	def StreamOrSaveSD(self, mode, filename):
 		self.printer_isstreaming = True
 		self.printer_streamingmode = mode #"sd" or "print" or ""
-		#self.printer_progress = (0.0, 0 ,0)
+		self.printer_progress = (0.0, 0 ,0)
 		
 
 		if self.printer_streamingmode == "sd":
