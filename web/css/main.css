@@ -39,11 +39,17 @@ body {
 }
 */
 
+.input_text_center{
+    text-align:center;
+}
+
+.control-label { font-weight: bold;}
+
 .navbar-container { }
 .panel-navbar { 
 	min-height: 35px;
 	margin-bottom: 5px;
-	background-color: #fefefe;
+	/* background-color: #fefefe;*/
     border: 1px solid #dddddd;
     border-radius:2px;
 	outline: none;
@@ -51,8 +57,10 @@ body {
 	-moz-box-shadow: none !important;
 	box-shadow: none !important;
 	
-	}
-.panel-navbar-body { padding: 5px;}
+}
+.panel-navbar-body {
+	padding: 5px;
+}
 
 .progress {
 	min-height: 20px;
