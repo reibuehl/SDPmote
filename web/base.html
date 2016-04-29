@@ -32,9 +32,7 @@
     <title>{% block title %}{{ title }}{% end %}</title>
 
 	<!-- CSS -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-	<!--<link href="css/select2.min.css" rel="stylesheet">
-	<link href="css/select2-bootstrap.min.css" rel="stylesheet">-->
+    <link href="css/paper_bootstrap.min.css" rel="stylesheet">
 	<link href="css/bootstrap-select.min.css" rel="stylesheet">
     <link href="css/main.css" rel="stylesheet">
 	
@@ -43,7 +41,6 @@
     <script src="js/bootstrap.min.js"></script>
 	<script src="js/bootstrap-switch.js"></script>
 	<script src="js/bootbox.min.js"></script>
-	<!--<script src="js/select2.min.js"></script>-->
 	<script src="js/bootstrap-select.min.js"></script>
 	<script src="js/crosshair.js"></script>
 	
@@ -782,39 +779,72 @@
 				<div role="tabpanel" class="tab-pane active" id="general">
 					
 					<form class="form-horizontal" role="form">
+					  
 					  <div class="form-group">
-						<label for="input_pics_per_second" class="col-sm-5 control-label">Picture every (n) seconds</label>
-						<div class="col-sm-7">
-						  <input type="number" class="form-control" id="input_pics_per_second">
-						</div>
+						<label for="input_pics_per_second" class="col-sm-5 control-label">Picture every</label>
+							<div class="col-sm-4">
+								<div class="input-group">
+									<input type="number" class="form-control" id="input_pics_per_second">
+									<span class="input-group-addon">seconds</span>
+								</div>
+							</div>
 					  </div>
+					  
 					  <div class="form-group">
-						<label for="tl_autostart" class="col-sm-5 control-label">AutoSTART Timelapse </label>
-						<div class="col-sm-7"><input type="checkbox" class="form-control" id="tl_autostart"></div>
-						<label for="tl_autostop" class="col-sm-5 control-label">AutoSTOP Timelapse </label>
-						<div class="col-sm-7"><input type="checkbox" class="form-control" id="tl_autostop"></div>
+						<label class="col-sm-5 control-label">Timelapse</label>
+							<div class="col-sm-7">
+							
+										<label for="tl_autostart" class="checkbox-inline">
+											<input type="checkbox" id="tl_autostart"> Autostart
+										</label>
+
+										<label for="tl_autostop" class="checkbox-inline">
+											<input type="checkbox" id="tl_autostop"> Autostop
+										</label>
+																		
+							</div>
 					  </div>
+					  
 					  <div class="form-group">
-						<label for="lights_on_onstart" class="col-sm-5 control-label">Lights ON on print start </label>
-						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_on_onstart"></div>
-						<label for="lights_off_oncomplete" class="col-sm-5 control-label">Lights OFF on print complete  </label>
-						<div class="col-sm-7"><input type="checkbox" class="form-control" id="lights_off_oncomplete"></div>
+						<label class="col-sm-5 control-label">Lights</label>
+							<div class="col-sm-7">
+								
+
+									<label for="lights_on_onstart" class="checkbox-inline">
+										<input type="checkbox" id="lights_on_onstart"> ON on start
+									</label>
+									<label for="lights_off_oncomplete" class="checkbox-inline">
+										<input type="checkbox" id="lights_off_oncomplete"> OFF on complete
+									</label>
+
+							
+							</div>
 					  </div>
+					  					  
+
 				  </form>
 			
 				</div>
 				<div role="tabpanel" class="tab-pane" id="notifications">
 					
 					<form class="form-horizontal" role="form">
+					  
+					  
 					  <div class="form-group">
-						<label for="email_on_complete" class="col-sm-5 control-label">Send email on print complete </label>
-						<div class="col-sm-7">
-						  <input type="checkbox" class="form-control" id="email_on_complete">
-						</div>
+						<label class="col-sm-5 control-label">Send email</label>
+							<div class="col-sm-7">
+							
+									<label for="email_on_complete" class="checkbox-inline">
+										<input type="checkbox" id="email_on_complete"> on print complete
+									</label>
+									
+							
+							</div>
+
 					  </div>
 					  
 					  <div class="form-group">
-						<label for="input_email_to" class="col-sm-5 control-label">Send email TO </label>
+						<label for="input_email_to" class="col-sm-5 control-label">Send to </label>
 						<div class="col-sm-7">
 						
 							<div class="input-group">
@@ -827,15 +857,15 @@
 						
 					  </div>
 					  <div class="form-group">
-						<label for="input_email_from" class="col-sm-5 control-label">email FROM </label>
+						<label for="input_email_from" class="col-sm-5 control-label">Send from </label>
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_from"></div>
-						<label for="input_email_user" class="col-sm-5 control-label">email username (smtp) </label>
+						<label for="input_email_user" class="col-sm-5 control-label">SMTP Username </label>
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_user"></div>
-						<label for="input_email_pw" class="col-sm-5 control-label">email password (smtp) </label>
+						<label for="input_email_pw" class="col-sm-5 control-label">SMTP Password </label>
 						<div class="col-sm-7"><input type="password" class="form-control" id="input_email_pw"></div>
-						<label for="input_email_server" class="col-sm-5 control-label">email server (smtp) </label>
+						<label for="input_email_server" class="col-sm-5 control-label">SMTP Server </label>
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_server"></div>
-						<label for="input_email_server_port" class="col-sm-5 control-label">email server port (smtp)</label>
+						<label for="input_email_server_port" class="col-sm-5 control-label">SMTP Port</label>
 						<div class="col-sm-7"><input type="text" class="form-control" id="input_email_server_port"></div>
 													
 
@@ -876,20 +906,28 @@
 							  </span>
 							</div>
 						</div>
+						
+						
+						<label class="col-sm-5 control-label">mjpg command control</label>
+							<div class="col-sm-7">
+	
+									<label for="lights_on_onstart" class="checkbox-inline">
+										<input type="checkbox" id="mjpg_autostart"> Start on run
+									</label>
+									<label for="lights_off_oncomplete" class="checkbox-inline">
+										<input type="checkbox" id="mjpg_autostop"> Stop on exit
+									</label>
 
-						<label for="mjpg_autostart" class="col-sm-5 control-label">mjpg autostart </label>
-						<div class="col-sm-7">
-						  <input type="checkbox" class="form-control" id="mjpg_autostart">
-						</div>
-						<label for="mjpg_autostop" class="col-sm-5 control-label">mjpg autostop </label>
-						<div class="col-sm-7">
-						  <input type="checkbox" class="form-control" id="mjpg_autostop">
+							
 						</div>
 						
-						<label for="input_mjpg_start_delay" class="col-sm-5 control-label">startup delay (s)</label>
-						<div class="col-sm-7">
-						  <input type="number" class="form-control" id="input_mjpg_start_delay">
-						</div>
+						<label for="input_mjpg_start_delay" class="col-sm-5 control-label">startup delay</label>
+							<div class="col-sm-4">
+								<div class="input-group">
+									<input type="number" class="form-control" id="input_mjpg_start_delay">
+									<span class="input-group-addon">seconds</span>
+								</div>
+							</div>
 							  
 					  </div>					  
 					  
@@ -915,7 +953,7 @@
 						<div class="col-sm-7">  
 							<div class="input-group">
 							  <span class="input-group-addon">
-								<input id="mjpg_web_override" type="checkbox">
+										<input id="mjpg_web_override" type="checkbox">
 							  </span>
 							  <input id="mjpg_web_override_string" type="text" class="form-control">
 							</div>
@@ -941,39 +979,58 @@
 
 						  </div>
 						  <div class="form-group">
-							<label for="input_serial_baud" class="col-sm-5 control-label">Serial Baud</label>
-							<div class="col-sm-7">
-							  <input type="number" class="form-control" id="input_serial_baud">
+							
+							<label for="input_serial_baud" class="col-sm-5 control-label">Serial Rate</label>
+							<div class="col-sm-4">
+								<div class="input-group">
+									<input type="number" class="form-control" id="input_serial_baud">
+									<span class="input-group-addon">baud</span>
+								</div>
 							</div>
+							
 						  </div>
 						  <div class="form-group">
-							<label for="input_serial_web_serial_ln_buffer" class="col-sm-5 control-label">Serial Line Buffer (web interface)</label>
-							<div class="col-sm-7">
-							  <input type="number" class="form-control" id="input_serial_web_serial_ln_buffer">
+							<label for="input_serial_web_serial_ln_buffer" class="col-sm-5 control-label">Serial Buffer (web interface)</label>
+							<div class="col-sm-4">
+								<div class="input-group">
+									<input type="number" class="form-control" id="input_serial_web_serial_ln_buffer">
+									<span class="input-group-addon">lines</span>
+								</div>
 							</div>
+
 						  </div>
 					</form>
 				</div>
 				<div role="tabpanel" class="tab-pane" id="gcode">
 					<form class="form-horizontal" role="form">
 							  <div class="form-group">
-								<label for="input_x_max_mm" class="col-sm-5 control-label">Build Plate, X (mm)</label>
-								<div class="col-sm-7">
-								  <input type="number" class="form-control" id="input_x_max_mm">
-								</div>
+								<label for="input_x_max_mm" class="col-sm-5 control-label">Build Area size, X</label>
+									<div class="col-sm-4">
+										<div class="input-group">
+											<input type="number" class="form-control" id="input_x_max_mm">
+											<span class="input-group-addon">mm</span>
+										</div>
+									</div>
 							  </div>
-							  <div class="form-group">
-								<label for="input_y_max_mm" class="col-sm-5 control-label">Build Plate, Y (mm)</label>
-								<div class="col-sm-7">
-								  <input type="number" class="form-control" id="input_y_max_mm">
-								</div>
+							   <div class="form-group">
+								<label for="input_y_max_mm" class="col-sm-5 control-label">Build Area size, Y</label>
+									<div class="col-sm-4">
+										<div class="input-group">
+											<input type="number" class="form-control" id="input_y_max_mm">
+											<span class="input-group-addon">mm</span>
+										</div>
+									</div>
 							  </div>
-							  <div class="form-group">
-								<label for="input_z_max_mm" class="col-sm-5 control-label">Build Plate, Z (mm)</label>
-								<div class="col-sm-7">
-								  <input type="number" class="form-control" id="input_z_max_mm">
-								</div>
+							   <div class="form-group">
+								<label for="input_z_max_mm" class="col-sm-5 control-label">Build Area size, Z</label>
+									<div class="col-sm-4">
+										<div class="input-group">
+											<input type="number" class="form-control" id="input_z_max_mm">
+											<span class="input-group-addon">mm</span>
+										</div>
+									</div>
 							  </div>
+							  
 							  <div class="form-group">
 								<label for="gcode_lights_on" class="col-sm-5 control-label">Lights ON gcode</label>
 								<div class="col-sm-7">
@@ -1041,13 +1098,13 @@
 						
 						<div class="panel panel-default panel-navbar">
 							<div class="panel-body panel-navbar-body">
-							<span id= "recordingstatus">Status loading...</span>
-													
 							
-							<div class="btn-group btn-group-sm pull-right" role="group" aria-label="camera control">
-							  <button type="button" id="but_nav_tl_toggle" onclick="javascript: ToggleTL(); "   class="btn btn-default" title="Toggle timelapse"><span class="glyphicon glyphicon-play"></span></button>
-							  <button type="button" id="but_nav_tl_picture" onclick="javascript: ScreenShot(); " class="btn btn-default" title="Take picture"><span class="glyphicon glyphicon-camera"></span></button>
-							</div>
+								<span id= "recordingstatus">Status loading...</span>
+							
+								<div class="btn-group btn-group-sm pull-right" role="group" aria-label="camera control">
+								  <button type="button" id="but_nav_tl_toggle" onclick="javascript: ToggleTL(); "   class="btn btn-default" title="Toggle timelapse"><span class="glyphicon glyphicon-play"></span></button>
+								  <button type="button" id="but_nav_tl_picture" onclick="javascript: ScreenShot(); " class="btn btn-default" title="Take picture"><span class="glyphicon glyphicon-camera"></span></button>
+								</div>
 							
 							
 						  </div>
@@ -1061,7 +1118,7 @@
 							
 								<div id="print_progress_div">	
 									<span class="pull-left" style="padding-right: 2px;">Progress: </span>
-									<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
+									<div class="progress pull-left" style="margin-bottom: 0; width: 120px; ">
 										<div id="progress_print" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
 											0%
 										</div>
@@ -1107,18 +1164,17 @@
                       
 						<div class="panel panel-default panel-navbar">
 							<div class="panel-body panel-navbar-body">
-					
-							<span class="pull-left" style="padding-right: 2px;">Diskspace: </span>
-							<div class="progress pull-left" style="margin-bottom: 0; width: 150px; ">
-								<div id="progress_space" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
-								0%
+								<span class="pull-left" style="padding-right: 2px;">Diskspace: </span>
+								<div class="progress pull-left" style="margin-bottom: 0; width: 120px; ">
+									<div id="progress_space" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+									0%
+									</div>
 								</div>
-							</div>
-							<span class="freevalue pull-left" style="padding-left: 2px;"></span>
+								<span class="freevalue pull-left" style="padding-left: 2px;"></span>
 							
 							
 						  
-						  </div>
+							</div>
 						</div>
 					  
 					  
