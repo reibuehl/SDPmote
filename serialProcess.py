@@ -474,7 +474,7 @@ class SerialProcess_mp(multiprocessing.Process):
 			if eof == True:
 				#end of file, so streaming is done!
 				self.printer_progress = (100.0,0,0)
-				self.toggle_stopprint("STREAM: EOF received, streaming done.")
+				self.toggle_stopprint("STREAM: DONE.")
 				return True
 				
 			if lnr % 50 == 0:
@@ -552,7 +552,7 @@ class SerialProcess_mp(multiprocessing.Process):
 					#check if W: (countdown to print) is smaller or equal to 1, when only checking for 0 there were some issues, thanks Amedee
 					if self.print_start_countdown <= 1:
 						#tooggle print start with notification
-						self.toggle_startprint("Heating DONE, start printing.")
+						self.toggle_startprint("Printing")
 						self.tempmonitor_enabled = True
 						
 					else:
@@ -690,7 +690,7 @@ class SerialProcess_mp(multiprocessing.Process):
 				
 				if task["CMD"] == "STARTMANUAL":
 					print "START print sent, override!"
-					self.toggle_startprint("Manual override, started printing.")
+					self.toggle_startprint("Manual override")
 				
 			# look for incoming serial data
 			if (self.sp.inWaiting() > 0):
