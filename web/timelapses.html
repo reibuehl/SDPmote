@@ -24,20 +24,24 @@
 {% block title %}{{ title }} - Timelapse folders{% end %}
 
 {% block pagescript %}
+
+	var itemsperpage = 8;
+	var currentpage = 0;
+	var folderitems;
 	
 	function CreateThumbnail(info){
+	
 	strtitle=info.directory.replace(/\\/g,"/").split("/").slice(-1);
 	strtitle_display = String(strtitle);
 	
 	//max 23 chars in display... otherwise thumbs will not wrap nicely
-	if (strtitle_display.length > 25) {strtitle_display = strtitle_display.slice(0,25)+"...";}
+	if (strtitle_display.length > 22) {strtitle_display = strtitle_display.slice(0,22)+"...";}
 	
 	img=info.directory.replace(/\\/g,"/").split("/").slice(1).join("/")+"/"+info.thumbnail;
 	
 	//find out if folder is currently beeing recorded, if so disable buttons and add text to folder name DONT load image CAN KILL IT!
-	if(global_tlon && strtitle==global_tlon_folder) {strdisabled="disabled"; strrecon=" [RECORDING]"; img=""; } else {strdisabled=""; strrecon=""; }
+	if(global_tlon && strtitle==global_tlon_folder) {strdisabled="disabled"; strrecon=" [RECORDING]"; img="images/rec.png"; } else {strdisabled=""; strrecon=""; }
 	
-	//thumb='      <div class="col-sm-6 col-md-3 thumb-hover">';
 	thumb='      <div class="col-lg-3 col-md-4 col-sm-5 thumb-hover">';
 	thumb=thumb+'	<div class="thumbnail">';
 	thumb=thumb+'	  <a onclick="javascript: initfileModal(\''+strtitle+'\'); " href="javascript: void(0);"><img src="' + img + '" alt="thumbnail"></a>';
@@ -47,17 +51,15 @@
 	thumb=thumb+'			<p>Folder "'+strtitle_display+'" has <b>'+info.count+' images</b> (Size: '+info.size+').</p>';
 	thumb=thumb+'				<p>';
 	thumb=thumb+'				<div class="btn-group">';
-	thumb=thumb+'				<button type="button" ' + strdisabled+ ' onclick="javascript: ziptldir(\''+strtitle+'\'); " class="btn btn-primary"><span class="glyphicon glyphicon-download"></span> Download</button>';
+	thumb=thumb+'				<button type="button" ' + strdisabled+ ' onclick="javascript: ziptldir(\''+strtitle+'\'); " class="btn btn-primary"><span class="glyphicon glyphicon-compressed"></span> Download</button>';
 	thumb=thumb+'				<button type="button" ' + strdisabled+ ' class="btn btn-primary dropdown-toggle" data-toggle="dropdown">';
 	thumb=thumb+'					<span class="caret"></span>';
     thumb=thumb+'					<span class="sr-only">Toggle Dropdown</span>';
 	thumb=thumb+' 				</button>';
 	thumb=thumb+'				<ul class="dropdown-menu" role="menu">';
-	thumb=thumb+' 					<li><a onclick="javascript: initfileModal(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-file"></span> Browse Pictures</a></li>';
+	thumb=thumb+' 					<li><a onclick="javascript: initfileModal(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-modal-window"></span> Browse Pictures</a></li>';
 	thumb=thumb+' 					<li><a onclick="javascript: rentldir(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-edit"></span> Rename</a></li>';
 	thumb=thumb+' 					<li><a onclick="javascript: deltldir(\''+strtitle+'\'); " href="javascript: void(0);"><span class="glyphicon glyphicon-trash"></span> Delete Folder</a></li>';
-	//thumb=thumb+' 					<li class="divider"></li>';
-	//thumb=thumb+' 					<li><a href="javascript: void(0);">Separated link</a></li>';
 	thumb=thumb+'				</ul>';
 	thumb=thumb+'				</div>';
 
@@ -76,17 +78,7 @@
 	
 	}
 		
-	function serverRespondDirs( data ) {
-	thumbs="";
-	
-	for (var i=0; i < data.info.length; i++){
-		thumbs=thumbs+CreateThumbnail(data.info[i]);
-	}
-	$('#row').html(thumbs);
-	$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span> refresh');
-	$('#btnrefresh').prop('disabled', false);
-	}
-	
+
 	function ziptldir(folder){
 		params = { op: "ziptldir", tlfolder: folder };
 		myDialogs.showPleaseWait();
@@ -112,8 +104,7 @@
 		});
 		
 
-	}
-	
+	}	
 	
 	function deltldir(folder){
 		
@@ -129,11 +120,52 @@
 	
 	function serverGetDirs( param ) {
 		
-		$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span> refreshing..')
+		$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span> refreshing...')
 		$('#btnrefresh').prop('disabled', true);
 		
 		params = { op: param };
 		$.getJSON( '/com' , params, serverRespondDirs );
+	}
+	
+	function serverRespondDirs( data ) {
+		
+		folderitems = data;
+		
+		displaydirs(0);
+
+		$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span>');
+		$('#btnrefresh').prop('disabled', false);
+	}
+	
+	function displaydirsnav(cmd) {
+		page=currentpage;
+		if (cmd == 'next') { page++; }
+		if (cmd == 'previous') { page--; }
+		displaydirs(page);
+	}
+	
+	function displaydirs(page) {
+		
+		thumbs="";
+		totalitems=folderitems.info.length;
+		totalpages=Math.ceil(totalitems/itemsperpage)-1;
+		
+		if (page < 0) {page=0;}
+		if (page > totalpages) {page =totalpages;}
+		currentpage=page;
+				
+		from=page*itemsperpage
+		to=(page*itemsperpage)+itemsperpage
+		
+		$('#pagination_text').text("Page "+(currentpage+1).toString()+"/"+(totalpages+1).toString()+" ("+totalitems.toString()+" directories)");
+		
+		if (to > totalitems) {to = totalitems; }
+		
+		for (var i=from; i < to; i++){
+			thumbs=thumbs+CreateThumbnail(folderitems.info[i]);
+		}
+		
+		$('#row').html(thumbs);
 	}
 	
 	
@@ -248,13 +280,25 @@
     </div>
   </div>
 </div>
-
 	
 	
-	<button type="button" id="btnrefresh" onclick="javascript: serverGetDirs('gettldirs'); " class="btn btn-default"><span class="glyphicon glyphicon-refresh"></span> refresh</button>
 	
-
-	<hr />
+		<div class="btn-toolbar" role="toolbar" style="margin: 0; padding-bottom: 30px;">
+		  <div class="text-center">
+				<ul class="pagination" style="margin: 0; ">
+					<li><a href="javascript:void(0)" onclick="javascript: displaydirsnav('previous'); ">«</a></li>
+					<!-- <li class="active"><a href="#">1</a></li>
+					<li><a href="#">2</a></li>
+					<li><a href="#">3</a></li>
+					<li><a href="#">4</a></li>-->
+					<li><a id="pagination_text" >0/0 total 0</a></li>					
+					<li><a href="javascript:void(0)" onclick="javascript: displaydirsnav('next'); ">»</a></li>
+					<li><a href="javascript:void(0)" id="btnrefresh" onclick="javascript: serverGetDirs('gettldirs'); "><span class="glyphicon glyphicon-refresh"></span></a></li>
+				</ul>
+		  </div>
+		</div>
+		
+	
 	<div id="row" class="row"></div>
    
 {% end %}	

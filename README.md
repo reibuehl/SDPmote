@@ -1,6 +1,6 @@
-#SDPmote
-Python app that uses an internal webserver (tornado) to serve a client to control / monitor your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs) while printing from SD-Card. It will run on Windows, Linux and on the Raspberry Pi (wheezy, jessie). It also has a pygame interface included that can be used as a touchscreen interface when you have a piTFT (or similar with 320x240 resolution attached). Unlike [octoprint](http://octoprint.org/) it does not stream gcode but  monitors the printer while printing from SD-Card.
-The applications name is derived from **SD** - Card, 3D-**P**rinting and re**mote**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer and one of the pygame interface.
+#SDPremote
+Python app that uses an internal webserver (tornado) to serve a client to control / monitor your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs) while printing from SD-Card. It will run on Windows, Linux and on the Raspberry Pi (wheezy, jessie). It also has a pygame interface included that can be used as a touchscreen interface when you have a piTFT (or similar with 320x240 resolution attached). It does stream gcode (directly and to the SD-Card, experimental) and can monitor the printer while printing from SD-Card.
+The applications name is derived from **SD** - Card, 3D-**P**rinting and **remote**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer and one of the pygame interface.
 ![alt web](/documentation/capture_web_control.PNG)
 ![alt pygame](/documentation/capture_pyg_main.PNG)
 
@@ -17,6 +17,7 @@ The applications name is derived from **SD** - Card, 3D-**P**rinting and re**mot
 - [crosshair](https://github.com/eschmar/crosshair)
 - [bootbox.js](http://bootboxjs.com/)
 - [bootstrap-switch](https://github.com/mewsoft/bootstrap-switch)
+- [bootstrap-select](https://silviomoreto.github.io/bootstrap-select/)
 
 #Installation (Raspberry Pi)
 
@@ -56,7 +57,7 @@ cd mjpg-streamer/mjpg-streamer-experimental
 export LD_LIBRARY_PATH=.
 make
 ```
-make sure mjpeg-streamer is running BEFORE SDPmote starts, best to run it as a deamon (or try with screen (```sudo apt-get install screen```)), look at 'raspi_stream' (in the root umcam folder, after the installation), configure for your input device, make it executable and run it.
+make sure mjpeg-streamer is running BEFORE SDPremote starts, best to run it as a deamon (or try with screen (```sudo apt-get install screen```)), look at 'raspi_stream' (in the root umcam folder, after the installation), configure for your input device, make it executable and run it.
 
 The command I Use for the raspi cam:
 ```
@@ -79,27 +80,27 @@ sudo systemctl enable mjpg-streamer
 ```
 After a reboot, mjpeg_streamer should be started automatically.
 
-#install SDPmote
+#install SDPremote
 ```
 cd ~
-git clone https://github.com/MartinBienz/SDPmote.git
+git clone https://github.com/MartinBienz/SDPremote.git
 ```
 
 ##run (no (touch)screen = no pygame interface):
 ```
-cd SDPmote
+cd SDPremote
 python main.py --headless
 ```
 
 ##run (pitft 2.8 / 320x240, touchscreen):
 ```
-cd SDPmote
+cd SDPremote
 python main.py --fullscreen --hidemouse
 ```
 
 ##run (GPIO enabled (I check fo sudo), no pygame interface)
 ```
-cd SDPmote
+cd SDPremote
 sudo python main.py --headless
 ```
 

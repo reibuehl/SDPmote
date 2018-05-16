@@ -152,13 +152,15 @@ def fix_ownership(path):
 #Usage: helpers.sendmail("bienzma@gmail.com", "from@gmail.com", "Print done", "Print successful, took 2 hourse to print.", username, password, server, port)
 
 class EmailThread(threading.Thread):
-	def __init__(self, to, efrom,  subject, text, attach, user, pw, server, port):
+	def __init__(self, to, efrom,  subject, text, attach, user, pw, server, port, callback=None):
 		self.msg = MIMEMultipart()
 
 		self.text = text
 		self.attach = attach
 		self.to = to
 		self.efrom = efrom
+		
+		self.callbackfunction=callback
 
 		self.gmail_user = user
 		self.gmail_pwd = pw
@@ -168,8 +170,9 @@ class EmailThread(threading.Thread):
 		self.msg['From'] = self.efrom
 		self.msg['To'] = self.to
 		self.msg['Subject'] = subject
-		print "Sending email..."
-		threading.Thread.__init__(self)
+		print "SENDMAIL: Sending started."
+		thread=threading.Thread.__init__(self)
+		return thread
 
 	def run (self):
 		
@@ -185,6 +188,7 @@ class EmailThread(threading.Thread):
 
 		#set mailServer to None
 		mailServer=None
+		returnmsg=False, "n/a"
 		
 		try:
 			mailServer = smtplib.SMTP(self.server, self.port)
@@ -193,27 +197,29 @@ class EmailThread(threading.Thread):
 			mailServer.ehlo()
 			mailServer.login(self.gmail_user, self.gmail_pwd)
 			mailServer.sendmail(self.gmail_user, self.to, self.msg.as_string())
-			print "Sending email... Done!"
-			
+			returnmsg=True, "SENDMAIL: OK, Message accepted."
+		
 		
 		except Exception as e:
-			print "Error: {name} ({msg}).".format(
-			name=e.__class__.__name__, 
-			msg=e)
-			print "Sending email... ABORTED!"
-		
+			returnmsg=False, "SENDMAIL: ABORTED! Error: {name} ({msg}).".format(name=e.__class__.__name__, msg=e)
+			
 		finally:
 			if mailServer:
 				# Should be mailServer.quit(), but that crashes...
 				mailServer.close()
-			
 		
-		
+		#if it has a callback defined send the status back to the caller
+		if not self.callbackfunction == None:
+			self.callbackfunction(returnmsg)
+		print returnmsg[1]
 		
 	
-def send_mail_async(to, efrom, subject, text, attach, user, pw, server, port):
-    EmailThread(to, efrom, subject, text, attach, user, pw, server, port).start()
+def send_mail_async(to, efrom, subject, text, attach, user, pw, server, port, callback=None):
+	mailthread=EmailThread(to, efrom, subject, text, attach, user, pw, server, port, callback)
+	mailthread.start()
+	return "SENDMAIL: Sending started."
 
+	
 #not used
 def sendmailattach(to, subject, text, attach):
 	msg = MIMEMultipart()
@@ -278,6 +284,20 @@ def sendmail(to, subject, content):
 #get hostname------------------------------------------------------------------------------
 def gethostname():
 	return socket.gethostname()
+
+
+def get_local_ip():
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	try:
+		# doesn't even have to be reachable
+		s.connect(('10.255.255.255', 0))
+		IP = s.getsockname()[0]
+	except:
+		IP = '127.0.0.1'
+	finally:
+		s.close()
+	return IP
+	
 	
 #CONFIG CLASS - reads from / saves to inifile and creates dict----------------------------------------------------------------------------
 	

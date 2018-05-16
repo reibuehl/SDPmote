@@ -21,7 +21,7 @@
 -->
 {% extends "base.html" %}
 
-{% block title %}{{ title }} - Ultimaker control and status{% end %}
+{% block title %}{{ title }} - Control and status{% end %}
 
 {% block pagescript %}
 	///CAM Stuff
@@ -30,6 +30,18 @@
 var imageNr = 0; // Serial number of current image
 var finished = new Array(); // References to img objects which have finished downloading
 var paused = false;
+var gcode_currentfile_info = new Array();
+
+var cam_src = "http://" + settings.Webserver.mjpg_ip  +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot
+var cam_src_stream = "http://" + settings.Webserver.mjpg_ip  +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlstream
+
+if (settings.Webserver.mjpg_web_override == "True") {
+	cam_src = settings.Webserver.mjpg_web_override_string + settings.Webserver.mjpg_urlsnapshot;
+	cam_src_stream = settings.Webserver.mjpg_web_override_string + settings.Webserver.mjpg_urlstream;
+	}
+
+
+var jservername="{{ servername }}";
 
 function ismsie() {
         var ua = window.navigator.userAgent;
@@ -49,7 +61,8 @@ function createImageLayer() {
   img.style.height = "338px";
   img.onload = imageOnload;
   img.onclick = imageOnclick;
-  img.src = "http://" + settings.Webserver.mjpg_ip +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + "&n=" + (++imageNr);
+  //img.src = "http://" + location.hostname +  ":" + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + "&n=" + (++imageNr);
+  img.src = cam_src + "&n=" + (++imageNr);
   var webcam = document.getElementById("webcam");
   webcam.insertBefore(img, webcam.firstChild);
   $('#wcstatus').html("Webcamstatus: Streaming (Frames streamed so far: " + imageNr + ")");
@@ -82,14 +95,14 @@ function setCam() {
 				
 		
 		if (ismsie() == true) { 
-			$('#webcam').html('<noscript><img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlsnapshot + '" /></noscript>');
+			$('#webcam').html('<noscript><img src="' + cam_src + '" /></noscript>');
 			$('#webcam').css("height", "338px");
 			createImageLayer();
 			$('#wcstatus').html("Webcamstatus: Webcam streaming");
 			}
 		else {
 			//for everything else, start mjpeg streming directly in browser...
-			$('#webcam').html('<img src="http://' + settings.Webserver.mjpg_ip +  ':' + settings.Webserver.mjpg_port + settings.Webserver.mjpg_urlstream + '" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 640px;" />');
+			$('#webcam').html('<img src="' + cam_src_stream + '" style="width: 100%; height: 100%; min-width: 320px; min-height: 240px; max-width: 640px;" />');
 		}
 	}
 	else
@@ -118,22 +131,168 @@ function setCam() {
 		
 	}
 	
+	
+	
 	function SendFullPrintStop() {
 		$.getJSON( '/com' , { op: "sendgcodespecial", command: "FULLSTOP" } );
 	}
 	
+	function serverGetGcodeFiles( param ) {
+		
+		//$('#btnrefresh_gcode').html('Refreshing... <span class="glyphicon glyphicon-refresh"></span>');
+		
+		//$('#btnrefresh_gcode').prop('disabled', true);
+		$('#select_gcode_files').prop('disabled', true);
+		$('#select_gcode_files').selectpicker('refresh');
+		$('#btngroup-fileprint-gcode button').attr('disabled','disabled');
+		
+		params = { op: "getgcodefiles"};
+		$.getJSON( '/com' , params, serverRespondGcodeFiles );
+		
+		
+	}
+	
+	function getgcodefileinfo( file ) {
+		
+		params = { op: "getgcodefileinfo", gcodefile: file};
+		$('#btngroup-fileprint-gcode button').attr('disabled','disabled');
+		
+		$('#panel_fileinfo_head').html("Requesting information for <b>"+file+"</b>...");
+		$('#panel_fileinfo_body').html("");
+		$('#panel_fileinfo').prop('hidden', false);
+		
+		
+		$.getJSON( '/com' , params, function(data) {
+			  
+			  //save the info for the current selected file
+			  gcode_currentfile_info = data.info;
+			 		 
+			  $('#panel_fileinfo_head').html("<b>"+data.info.filename+"</b>, size <b>"+data.info.size+"</b> with <b>"+data.info.linecount+" lines</b> ("+data.info.lastmodified+")");
+			  
+			  body=	"<span>Print time: <b>"+data.info.print_time+"</b></span><br />"+
+					"<span>Material: <b>"+data.info.material+"</b></span><br />"+
+					"<span>Layer count: <b>"+data.info.layer_count+"</b></span><br />"+
+					"<span>Flavor / generator: <b>"+data.info.flavor+" / "+ data.info.generator +"</b></span><br />"+
+					//"<span>Sliced at: <b>"+ data.info.sliced_at +"</b></span><br />"+
+					"<span>Basic Settings: <b>"+data.info.basic_settings +"</b></span><br />"
+					  
+			  
+			  //$('#panel_fileinfo_body').html(JSON.stringify(data, null, 4));
+			  $('#panel_fileinfo_body').html(body);
+			  
+			  $('#btngroup-fileprint-gcode button').removeAttr('disabled');
+	  
+			
+			});
+		
+		
+	}
+	
+	function delgcodefile(file, target){
+		
+		bootbox.confirm(target.toUpperCase()+": Are you sure you want to delete the file <strong>"+file+"</strong> ?", function(result) {
+		 if (result) {
+		   //Delete it
+			
+			if (target == "sd-card") {
+				
+				SendGCodeDirect('M30 '+file);
+				setTimeout(refreshSD, 500);
+			
+			}
+			else
+			{
+				jQuery.ajaxSettings.traditional = true;
+				params = { op: "delgcodefile", gcodefile: file };
+				$.getJSON( '/com' , params, serverRespondGcodeFiles );
+			}
+		
+		 }
+		}); 
+	}
+	
+	
+	
+	
+	function serverRespondGcodeFiles(data) {
+	
+	var rootpath="g-codefile/print/";
+					
+	$('#select_gcode_files').empty();
+	
+	$('#select_gcode_files').selectpicker('refresh');
+	
+	$('#header_gcode_select').html(data.total.count+" files, with total size of "+data.total.size);
+	
+	for (var i = 0; i < data.files.length; i++) {
+		$('#select_gcode_files').append('<option data-icon="glyphicon-file" data-subtext="'+data.files[i].lastmodified+' | '+data.files[i].size+'">'+data.files[i].filename+'</option>');
+	}
+
+	//$('#btnrefresh_gcode').html('Refresh <span class="glyphicon glyphicon-refresh"></span>');
+	//$('#btnrefresh_gcode').prop('disabled', false);
+	$('#select_gcode_files').prop('disabled', false);
+	$('#select_gcode_files').selectpicker('refresh');
+	$('#btngroup-fileprint-gcode button').removeAttr('disabled');
+					
+	
+	}
 	
 	function refreshSD() {
-		$('#btnrefresh').html('<span class="glyphicon glyphicon-refresh"></span>...');
+		$('#btnrefresh').html('working... <span class="glyphicon glyphicon-refresh"></span>');
 		
 		$('#btnrefresh').prop('disabled', true);
 		$('#select_files').prop('disabled', true);
+		$('#select_files').selectpicker('refresh');
 		$('#btngroup-fileprint button').attr('disabled','disabled');
 		
 		
 		SendGCodeDirect("M20");
 	
 	
+	}
+	
+	function SendSaveSD(fname){
+		$.getJSON( '/com' , { op: "savesd", filename : fname} );
+		
+	}
+	
+	function SendStreamFile(fname){
+		
+		if (fname != '') { 
+		
+			//check if the current fileinfo contains UltiGCode flavor, if so, ask if streaming is really a good idea?
+			if (gcode_currentfile_info.flavor == "UltiGCode"){
+				
+				bootbox.confirm({
+					title: 'WARNING: File '+fname+' contains '+gcode_currentfile_info.flavor+'!',
+					message: 'Are you sure you want to stream the file <strong>'+fname+'</strong>, it contains '+gcode_currentfile_info.flavor+' and will probably not print correctly?!',
+					buttons: {
+						'cancel': {
+							label: 'Cancel',
+							className: 'btn-default'
+						},
+						'confirm': {
+							label: 'Start anyway',
+							className: 'btn-danger'
+						}
+					},
+					callback: function(result) {
+						if (result) {
+							//Okay, you have been warned, do it! Starting after confirm
+							$.getJSON( '/com' , { op: "streamfile", filename : fname} );
+						}
+					}
+				});
+				
+			}
+			else
+			{
+				//starting the streaming process
+				$.getJSON( '/com' , { op: "streamfile", filename : fname} );
+			}
+		}
+		
+		
 	}
 	
 	function SendGCodeDirect(cmd){
@@ -200,16 +359,19 @@ function setCam() {
 		
 	}
 	
-	function UploadFile() {
+	function UploadFile(target) {
 	
+			//set the title, either sd or server
+			if (target == "sd-card") { mytitle="Upload file to "+target.toUpperCase(); } else { mytitle="Upload file to "+jservername.toUpperCase(); }
+				
 			var myfilebox=bootbox.dialog({
-                title: "Upload gcode file...",
+                title: mytitle,
 				closeButton: false,
                 message: '<form id="up" enctype="multipart/form-data" action="/upload" method="post">' +
 							'<div class="form-group">' +
-							'	<label for="InputFile">File input</label>' +
-							'	<input type="file" name="InputFile" id="InputFile" accept=".gcode,.txt">' +
-							'	<p id="frmhelper" class="help-block">Select the gcode file to upload and press upload.</p>' +
+							'	<label for="InputFile">Select File:</label>' +
+							'	<input type="file" name="InputFile" id="InputFile" accept=".gcode,.gco"> ' +
+							'	<p id="frmhelper" class="help-block">Select a g-code file and press upload.</p>' +
 							'</div>' +
 						'</form>',
                 buttons: {
@@ -228,7 +390,7 @@ function setCam() {
 						$myfiles=$form.find("input[type='file']")[0].files;
 						
 						if ($myfiles.length == 0) {
-							$('#frmhelper').html('ERROR: <p class="text-warning">You must select a file to upload (*.gcode)!</p>');
+							$('#frmhelper').html('ERROR: <p class="text-warning">You must select a file to upload (*.gco, *.gcode)!</p>');
 							return false;
 						
 						}
@@ -241,6 +403,7 @@ function setCam() {
 											
 						var form_data = new FormData();
 						form_data.append("InputFile", $myfile);
+						form_data.append("dest-folder", target);
 
 						
 						$.ajax({
@@ -250,8 +413,16 @@ function setCam() {
 							data: form_data,
 							type: $form.attr("method"),
 							success: function(res) {
-								$('#frmhelper').html('UPLOAD: <p class="text-info"> Sending file '+res+'...DONE!</p>');
+								$('#frmhelper').html('UPLOAD: <p class="text-info"> Sending file '+$myfile.name+'...DONE!</p>');
 								$(".modal-footer :input").attr("disabled", false);
+								if (target == "sd-card") {
+									SendSaveSD($myfile.name);
+									$('#frmhelper').html('<p class="text-info"> Uploading to SD started!</p>');
+								}
+								else
+								{	
+									serverGetGcodeFiles();
+								}
 								myfilebox.modal('hide');
 							},
 							error: function() {
@@ -276,7 +447,25 @@ function setCam() {
 	
 	$(document).ready( function() {
 	
-	
+		$('#panel_fileinfo').prop('hidden', true);
+		
+		//activate select2 on the file selector
+		//$('#select_files').select2();
+		
+		//$('#select_files').select2({
+		//	theme: "bootstrap",
+		//	allowClear: true,
+		//	placeholder: "Select SD-File",
+		//	width: '100%'
+		//	});
+		
+		 $('#select_gcode_files').on('change', function(){
+			var selected = $(this).val();
+			getgcodefileinfo(selected);
+		});
+		
+		
+			
 		//function for the tabs in the controls section
 		$("#controlstab a").click(function(e){
 			e.preventDefault();
@@ -349,6 +538,8 @@ function setCam() {
 		});
 	
 		GetSerialStatus();
+		
+		serverGetGcodeFiles();
 		//SerialInt = setInterval( "GetSerialStatus()" , 1000);
 		
 		setCam();
@@ -379,9 +570,10 @@ function setCam() {
 
 					<!-- Nav tabs -->
 					<ul class="nav nav-tabs nav-justified" role="tablist" id="controlstab">
-						<li role="presentation" class="active" style="display:table-cell !important;"><a href="#controltemp" aria-controls="controltemp" role="tab" data-toggle="tab">Temp/SD</a></li>
-						<li role="presentation" style="display:table-cell !important;"><a href="#controlrel" aria-controls="controlrel" role="tab" data-toggle="tab">XYZE (Rel)</a></li>
-						<li role="presentation" style="display:table-cell !important;"><a href="#controlabs" aria-controls="controlabs" role="tab" data-toggle="tab">XYZ (Abs)</a></li>
+						<li role="presentation" class="active" style="display:table-cell !important;"><a href="#controltemp" aria-controls="controltemp" role="tab" data-toggle="tab">General</a></li>
+						<li role="presentation" style="display:table-cell !important;"><a href="#streaming" aria-controls="streaming" role="tab" data-toggle="tab">Stream</a></li>
+						<li role="presentation" style="display:table-cell !important;"><a href="#controlrel" aria-controls="controlrel" role="tab" data-toggle="tab">Jog</a></li>
+						<li role="presentation" style="display:table-cell !important;"><a href="#controlabs" aria-controls="controlabs" role="tab" data-toggle="tab">Move</a></li>
 					</ul>
 
 					<!-- Tab panes -->
@@ -390,10 +582,11 @@ function setCam() {
 							<div role="tabpanel" class="tab-pane active" id="controltemp">
 							
 								<div class="temp-panel" style="display: inline-block; width: 200px;">
-								<h2>Extruder</h2>
+								<h4>Extruder</h4>
 									<div>
 										Current: <span id="temp_ext_current">0.0</span>
 										Target: <span id="temp_ext_target">0.0</span>
+															
 									</div>
 									<div>
 										<div class="input-group">
@@ -407,7 +600,7 @@ function setCam() {
 								</div>
 							
 								<div class="tempbed-panel"  style="display: inline-block; width: 200px;">
-								<h2>Bed</h2>
+								<h4>Bed</h4>
 									<div>
 										Current: <span id="temp_bed_current">0.0</span>
 										Target: <span id="temp_bed_target">0.0</span>
@@ -423,16 +616,17 @@ function setCam() {
 									</div>
 								</div>
 							
-								<h2>SD Card</h2>
-								<div class="input-group">
-									<span class="input-group-btn">
-										<button class="btn btn-default" id="btnrefresh" type="button" onclick="javascript: refreshSD();"><span class="glyphicon glyphicon-refresh"></span></button>
-									</span>
-									<select id="select_files" class="form-control"  style="min-width: 75px;">
-									</select>
+								<h4 style="min-width: 200px;">SD Card	
+									<button class="btn btn-default btn-xs" id="btnrefresh" type="button" onclick="javascript: refreshSD();"><span class="glyphicon glyphicon-refresh"></span></button>
+								</h4>
+								
+								<div class="input-group" >
+									
+									<select id="select_files" class="selectpicker show-tick" data-size="8" data-live-search="true" data-dropupAuto="false" title="Choose file...">
+									</select>								
 									
 									<div class="input-group-btn" id="btngroup-fileprint">
-										  <button type="button" class="btn btn-primary" onclick="javascript: SendGCodeDirect('M32 '+$('#select_files option:selected').text()); "><span class="glyphicon glyphicon-print"></span> Print (M32)</button>
+										  <button type="button" class="btn btn-primary" onclick="javascript: SendGCodeDirect('M32 '+$('#select_files').val()); "><span class="glyphicon glyphicon-print"></span> Print (M32)</button>
 										  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
 											<span class="caret"></span>
 											<span class="sr-only">Toggle Dropdown</span>
@@ -445,30 +639,69 @@ function setCam() {
 											<li><a href="#" onclick="javascript: SendGCodeDirect('M25'); "><span class="glyphicon glyphicon-pause"></span> Pause (M25)</a></li>
 											<li><a href="#" onclick="javascript: SendGCodeDirect('M26 S0'); "><span class="glyphicon glyphicon-step-backward"></span> Reset FPos (M26 S0)</a></li>
 											<li class="divider"></li>
-											<!-- <li><a href="#" onclick="javascript: UploadFile(); "><span class="glyphicon glyphicon-upload"> Upload...</a></li>-->
-											<li><a href="#" onclick="javascript: SendGCodeDirect('M30 '+$('#select_files option:selected').text()); "><span class="glyphicon glyphicon-trash"></span> Delete (M30)</a></li>
+											<li><a href="#" onclick="javascript: UploadFile('sd-card'); "><span class="glyphicon glyphicon-upload"></span> Upload file to SD</a></li>
+											<li class="divider"></li>
+											<li><a href="#" onclick="javascript: if ($('#select_files').val() == '') { } else { delgcodefile($('#select_files').val(), 'sd-card'); } "><span class="glyphicon glyphicon-trash"></span> Delete file(M30)</a></li>
 										  </ul>
 									</div>
 									
+									
 								</div><!-- /input-group -->	
-								<h2>Lights</h2>
-								<div class="input-group">
-									ON: <button type="button" class="btn btn-default glyphicon glyphicon glyphicon-eye-open" onclick="javascript: SendGCodeDirect(settings.Printer.gcode_lights_on); "></button>
-									OFF: <button type="button" class="btn btn-default glyphicon glyphicon glyphicon-eye-close" onclick="javascript: SendGCodeDirect(settings.Printer.gcode_lights_off); "></button>
 								
-								</div><!-- /input-group -->	
+								<h4>Lights
+								<div class="btn-group" role="group" style="min-width:280px;">
+									
+									<button type="button" class="btn btn-default glyphicon glyphicon glyphicon-eye-open" onclick="javascript: SendGCodeDirect(settings.Printer.gcode_lights_on); "></button>
+									<button type="button" class="btn btn-default glyphicon glyphicon glyphicon-eye-close" onclick="javascript: SendGCodeDirect(settings.Printer.gcode_lights_off); "></button>
+								</div></h4>
 											
 						</div>
+														
+						<div role="tabpanel" class="tab-pane" id="streaming" style="min-width: 250px;">
+							<h4>G-Code files on {{ servername }}
+								<!-- <button class="btn btn-default btn-xs" id="btnrefresh_gcode" type="button" onclick="javascript: serverGetGcodeFiles();">Refresh <span class="glyphicon glyphicon-refresh"></span></button> -->
+							</h4>
+							<p id="header_gcode_select" style="margin-top: -10px;"></p>
+							
+								
+								<div class="input-group" >
+									
+									<select id="select_gcode_files" class="selectpicker show-tick" data-width="100%" data-size="8" data-live-search="true" data-dropupAuto="false" title="Choose file...">
+									</select>								
+									
+									<div class="input-group-btn" id="btngroup-fileprint-gcode">
+										  <button type="button" class="btn btn-primary" onclick="javascript: SendStreamFile($('#select_gcode_files').val()); "><span class="glyphicon glyphicon-print"></span> Start</button>
+										  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+											<span class="caret"></span>
+											<span class="sr-only">Toggle Dropdown</span>
+										  </button>
+										  <ul class="dropdown-menu" role="menu">
+											<li><a href="#" onclick="javascript: UploadFile('print'); "><span class="glyphicon glyphicon-upload"></span> Upload file</a></li>
+											<li class="divider"></li>
+											<li><a href="#" onclick="javascript: if ($('#select_gcode_files').val() == '') { } else { delgcodefile($('#select_gcode_files').val(), 'print');} "><span class="glyphicon glyphicon-trash"></span> Delete file</a></li>
+										  </ul>
+									</div>
+									
+									
+								</div><!-- /input-group -->	
+								
+								<div class="panel panel-primary" id="panel_fileinfo" style="min-width: 250px; margin-top: 10px; ">
+								<div class="panel-heading" id="panel_fileinfo_head">File info</div>
+								<div class="panel-body" id="panel_fileinfo_body">
+								File information....
+								</div>
+								</div>
 						
+						</div>
 						
 						<div role="tabpanel" class="tab-pane" id="controlrel">
 							
 							<!-- Panel for xy axes -->
 							
 							<div class="rel-xy-panel" style="display: inline-block; vertical-align: top; min-width: 150px;">
-								<h2>X/Y</h2>
+								<h4>X/Y</h4>
 								<div>
-									<button type="button" style="margin: 0px 0px 5px 44px;  " class="btn btn-default glyphicon glyphicon glyphicon-chevron-up" onclick="javascript: SendMoveRel('Y'); "></button>
+									<button type="button" style="margin: 0px 0px 5px 48px;  " class="btn btn-default glyphicon glyphicon glyphicon-chevron-up" onclick="javascript: SendMoveRel('Y'); "></button>
 								</div>
 								<div>
 									<button type="button" class="btn btn-default glyphicon glyphicon-chevron-left" onclick="javascript: SendMoveRel('X-'); "></button>
@@ -476,12 +709,12 @@ function setCam() {
 									<button type="button" class="btn btn-default glyphicon glyphicon-chevron-right" onclick="javascript: SendMoveRel('X'); "></button>
 								</div>
 								<div>
-									<button type="button" style="margin: 5px 0px 0px 44px;  " class="btn btn-default glyphicon  glyphicon-chevron-down" onclick="javascript: SendMoveRel('Y-'); "></button>
+									<button type="button" style="margin: 5px 0px 0px 48px;  " class="btn btn-default glyphicon  glyphicon-chevron-down" onclick="javascript: SendMoveRel('Y-'); "></button>
 								</div>
 							</div>
 							
 							<div class="rel-z-panel" style="display: inline-block;  vertical-align: top; margin-left: 10px;">
-								<h2>Z</h2>
+								<h4>Z</h4>
 								<div>
 									<button type="button" style="margin: 0px 0px 5px 0px; " class="btn btn-default glyphicon glyphicon glyphicon-chevron-up" onclick="javascript: SendMoveRel('Z-'); "></button>
 								</div>
@@ -495,7 +728,7 @@ function setCam() {
 							
 							
 							<div class="dist-panel" style="display: inline-block; vertical-align: top; margin-left: 20px;">
-								<h2>Steps</h2>
+								<h4>Steps</h4>
 								   <div class="btn-group" style="min-width: 200px;" data-toggle="buttons" id="rel-moveby">
                                         
 										<label class="btn btn-default">
@@ -514,15 +747,15 @@ function setCam() {
                                     </div>
                             </div>
 							
-							<h2>Extrude</h2>
-							<div class="rel-e-panel" style="margin-top: 5px;  min-width: 250px;">
+							<h4>Extrude</h4>
+							<div class="rel-e-panel" style="margin-top: 5px;  min-width: 250px; max-width: 300px; ">
 									<div>
 										<div class="input-group">
 										  <div class="input-group-addon">mm</div>
 										  <input type="text" class="form-control" id="temp_extrude_mm" placeholder="0">
 										  <span class="input-group-btn">
-											<button class="btn btn-default" type="button" onclick="javascript:  SendMoveRel('E'); ">E</button>
-											<button class="btn btn-default" type="button" onclick="javascript:  SendMoveRel('E-'); ">R</button>
+											<button class="btn btn-default" type="button" onclick="javascript:  SendMoveRel('E'); ">Extrude</button>
+											<button class="btn btn-default" type="button" onclick="javascript:  SendMoveRel('E-'); ">Retract</button>
 										  </span>
 										</div>
 								</div>
