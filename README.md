@@ -1,5 +1,5 @@
 #SDPremote
-Python app that uses an internal webserver (tornado) to serve a client to control / monitor your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs) while printing from SD-Card. It will run on Windows, Linux and on the Raspberry Pi (wheezy, jessie). It also has a pygame interface included that can be used as a touchscreen interface when you have a piTFT (or similar with 320x240 resolution attached). Unlike [octoprint](http://octoprint.org/) it does not stream gcode but  monitors the printer while printing from SD-Card.
+Python app that uses an internal webserver (tornado) to serve a client to control / monitor your ultimaker / other marlin based 3d printer. Can also use mjpeg-streamer to stream and record pictures (TLs) while printing from SD-Card. It will run on Windows, Linux and on the Raspberry Pi (wheezy, jessie). It also has a pygame interface included that can be used as a touchscreen interface when you have a piTFT (or similar with 320x240 resolution attached). It does stream gcode (directly and to the SD-Card, experimental) and can monitor the printer while printing from SD-Card.
 The applications name is derived from **SD** - Card, 3D-**P**rinting and **remote**. Below you can see a screenshot of the webinterface's control section where you can control and monitor your printer and one of the pygame interface.
 ![alt web](/documentation/capture_web_control.PNG)
 ![alt pygame](/documentation/capture_pyg_main.PNG)
@@ -17,6 +17,7 @@ The applications name is derived from **SD** - Card, 3D-**P**rinting and **remot
 - [crosshair](https://github.com/eschmar/crosshair)
 - [bootbox.js](http://bootboxjs.com/)
 - [bootstrap-switch](https://github.com/mewsoft/bootstrap-switch)
+- [bootstrap-select](https://silviomoreto.github.io/bootstrap-select/)
 
 #Installation (Raspberry Pi)
 
